@@ -544,7 +544,7 @@
 
   <script>
    function handleSubmit() {
-  const LOOPS_FORM_ID = 'YOUR_FORM_ID'; // ← same form ID as before
+  const LOOPS_FORM_ID = 'cmp31armp01hx0iy8v5vfkqds'; // ← same form ID as before
 
   const input = document.getElementById('emailInput');
   const success = document.getElementById('formSuccess');
@@ -556,7 +556,7 @@
     return;
   }
 
-  fetch('https://app.loops.so/api/newsletter-form/' + LOOPS_FORM_ID, {
+  fetch('https://app.loops.so/api/newsletter-form/' + cmp31armp01hx0iy8v5vfkqds, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: 'email=' + encodeURIComponent(val)
