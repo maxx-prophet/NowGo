@@ -543,8 +543,8 @@
   </div>
 
   <script>
-    function handleSubmit() {
-  const LOOPS_FORM_ID = 'cmp31armp01hx0iy8v5vfkqds'; // ← from Loops > Forms > Embed
+   function handleSubmit() {
+  const LOOPS_FORM_ID = 'YOUR_FORM_ID'; // ← same form ID as before
 
   const input = document.getElementById('emailInput');
   const success = document.getElementById('formSuccess');
@@ -558,8 +558,8 @@
 
   fetch('https://app.loops.so/api/newsletter-form/' + LOOPS_FORM_ID, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: val })
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'email=' + encodeURIComponent(val)
   })
   .then(res => res.json())
   .then(data => {
@@ -573,8 +573,7 @@
     input.style.borderColor = 'rgba(239,68,68,0.5)';
     setTimeout(() => input.style.borderColor = '', 1200);
   });
-}    // Allow Enter key on input
-    document.getElementById('emailInput').addEventListener('keydown', function(e) {
+}    document.getElementById('emailInput').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') handleSubmit();
     });
   </script>
