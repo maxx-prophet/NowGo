@@ -544,23 +544,41 @@
 
   <script>
     function handleSubmit() {
-      const input = document.getElementById('emailInput');
-      const success = document.getElementById('formSuccess');
-      const val = input.value.trim();
-      if (!val || !val.includes('@')) {
-        input.style.borderColor = 'rgba(239,68,68,0.5)';
-        setTimeout(() => input.style.borderColor = '', 1200);
-        return;
-      }
-      // In production: POST to your email capture service (Mailchimp, ConvertKit, etc.)
-      // For now, just show confirmation
-      input.style.display = 'none';
-      document.querySelector('.form-btn').style.display = 'none';
-      success.style.display = 'block';
-      // Log for manual collection during pre-launch
-      console.log('Early access signup:', val);
-    }
+  const LOOPS_API_KEY = '43e1b4b986448a173dfb9b67ecc4720f'; // ← paste here
+  const LOOPS_LIST_ID = 'cmp725dso06bw0j3gbsk4adom';       // ← paste here
 
+  const input = document.getElementById('emailInput');
+  const success = document.getElementById('formSuccess');
+  const val = input.value.trim();
+
+  if (!val || !val.includes('@')) {
+    input.style.borderColor = 'rgba(239,68,68,0.5)';
+    setTimeout(() => input.style.borderColor = '', 1200);
+    return;
+  }
+
+  fetch('https://app.loops.so/api/v1/contacts/create', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + LOOPS_API_KEY
+    },
+    body: JSON.stringify({
+      email: val,
+      source: 'waitlist',
+      mailingLists: { [LOOPS_LIST_ID]: true }
+    })
+  })
+  .then(() => {
+    input.style.display = 'none';
+    document.querySelector('.form-btn').style.display = 'none';
+    success.style.display = 'block';
+  })
+  .catch(() => {
+    input.style.borderColor = 'rgba(239,68,68,0.5)';
+    setTimeout(() => input.style.borderColor = '', 1200);
+  });
+}    
     // Allow Enter key on input
     document.getElementById('emailInput').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') handleSubmit();
