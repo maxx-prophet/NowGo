@@ -544,8 +544,7 @@
 
   <script>
     function handleSubmit() {
-  const LOOPS_API_KEY = '43e1b4b986448a173dfb9b67ecc4720f'; // ← paste here
-  const LOOPS_LIST_ID = 'cmp725dso06bw0j3gbsk4adom';       // ← paste here
+  const LOOPS_FORM_ID = 'cmp31armp01hx0iy8v5vfkqds'; // ← from Loops > Forms > Embed
 
   const input = document.getElementById('emailInput');
   const success = document.getElementById('formSuccess');
@@ -557,29 +556,24 @@
     return;
   }
 
-  fetch('https://app.loops.so/api/v1/contacts/create', {
+  fetch('https://app.loops.so/api/newsletter-form/' + LOOPS_FORM_ID, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + LOOPS_API_KEY
-    },
-    body: JSON.stringify({
-      email: val,
-      source: 'waitlist',
-      mailingLists: { [LOOPS_LIST_ID]: true }
-    })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: val })
   })
-  .then(() => {
-    input.style.display = 'none';
-    document.querySelector('.form-btn').style.display = 'none';
-    success.style.display = 'block';
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      input.style.display = 'none';
+      document.querySelector('.form-btn').style.display = 'none';
+      success.style.display = 'block';
+    }
   })
   .catch(() => {
     input.style.borderColor = 'rgba(239,68,68,0.5)';
     setTimeout(() => input.style.borderColor = '', 1200);
   });
-}    
-    // Allow Enter key on input
+}    // Allow Enter key on input
     document.getElementById('emailInput').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') handleSubmit();
     });
