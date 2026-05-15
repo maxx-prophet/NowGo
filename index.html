@@ -10,6 +10,8 @@
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name='impact-site-verification' value='1d48550e-cbbe-4fe0-8a79-0e2759304933'>
+
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -445,6 +447,7 @@
         <div class="form-label">Get early access</div>
         <div class="form-row">
           <input class="form-input" type="email" id="emailInput" placeholder="your@email.com" />
+          <div class="cf-turnstile" data-sitekey="0x4AAAAAADQBXTDo4epJf9p-"></div>
           <button class="form-btn" onclick="handleSubmit()">Notify me →</button>
         </div>
         <p class="form-note">NYC launch first. No spam. Unsubscribe anytime.</p>
@@ -555,6 +558,8 @@
     setTimeout(() => input.style.borderColor = '', 1200);
     return;
   }
+  const turnstile = document.querySelector('[name="cf-turnstile-response"]');
+if (!turnstile || !turnstile.value) return;
 
   fetch('https://app.loops.so/api/newsletter-form/' + 'cmp31armp01hx0iy8v5vfkqds', {
     method: 'POST',
