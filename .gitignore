@@ -1,0 +1,21 @@
+# Environment variables — never commit these
+.env
+.env.*
+.env.nowgo
+
+# Dependencies
+node_modules/
+
+# Data files (can contain API responses with sensitive info)
+data/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Runtime
+pids
+*.pid
