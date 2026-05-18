@@ -1,0 +1,19 @@
+{
+  "type": "module",
+  "scripts": {
+    "migrate": "node db/migrate.js",
+    "ingest": "node db/ingest.js",
+    "server": "node src/server.js",
+    "fetch:tm": "node src/fetchers/ticketmaster.js",
+    "fetch:sg": "node src/fetchers/seatgeek.js",
+    "fetch:parks": "node src/fetchers/nyc-parks.js",
+    "fetch:eb": "node src/fetchers/eventbrite.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "express": "^5.2.1",
+    "node-cron": "^4.2.1",
+    "node-fetch": "^3.0.0",
+    "pg": "^8.20.0"
+  }
+}
