@@ -1,6 +1,6 @@
 // For iOS Simulator: localhost works fine.
 // For physical iPhone: replace with your machine's local IP (run `ipconfig getifaddr en0`).
-const API_BASE = "http://192.168.68.57:4000";
+const API_BASE = "http://localhost:4000";
 
 export async function fetchTonightEvents({ lat, lng, mode = "transit", segment, radiusMiles = 10 } = {}) {
   const params = new URLSearchParams({ limit: "50", radius_miles: String(radiusMiles) });

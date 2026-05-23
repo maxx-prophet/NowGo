@@ -103,7 +103,7 @@ function normalizeEventbriteEvent(e) {
 async function fetchEventbrite() {
   const { start, end } = getTonightWindow();
 
-  const url = new URL("https://www.eventbriteapi.com/v3/events/");
+  const url = new URL("https://www.eventbriteapi.com/v3/events/search/");
   url.searchParams.set("location.latitude", NYC_LAT);
   url.searchParams.set("location.longitude", NYC_LNG);
   url.searchParams.set("location.within", `${RADIUS_MILES}mi`);
@@ -111,7 +111,6 @@ async function fetchEventbrite() {
   url.searchParams.set("start_date.range_end", end);
   url.searchParams.set("expand", "venue,ticket_availability,category,subcategory");
   url.searchParams.set("page_size", "50");
-  url.searchParams.set("status", "live");
 
   console.log("\n📡 Fetching Eventbrite...");
   console.log(`   Window: ${start} → ${end}\n`);

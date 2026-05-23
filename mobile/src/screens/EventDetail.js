@@ -30,9 +30,10 @@ function leaveByDisplay(leaveBy) {
 
 function formatPrice(min, max, isFree) {
   if (isFree) return "Free";
-  if (!min && !max) return "Price unavailable";
-  if (!max || min === max) return `$${min.toFixed(2)}`;
-  return `$${min.toFixed(2)} – $${max.toFixed(2)}`;
+  if (min == null && max == null) return "Price unavailable";
+  if (min == null) return `$${Number(max).toFixed(2)}`;
+  if (max == null || min === max) return `$${Number(min).toFixed(2)}`;
+  return `$${Number(min).toFixed(2)} – $${Number(max).toFixed(2)}`;
 }
 
 export default function EventDetail({ route, navigation }) {

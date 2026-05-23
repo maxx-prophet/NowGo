@@ -11,9 +11,10 @@ async function runPipeline() {
   console.log(`\n⏰ [${started}] Scheduler: starting fetch → ingest pipeline`);
 
   const steps = [
-    { name: "fetch:tm",  cmd: "node src/fetchers/ticketmaster.js" },
-    { name: "fetch:sg",  cmd: "node src/fetchers/seatgeek.js" },
-    { name: "ingest",    cmd: "node db/ingest.js" },
+    { name: "fetch:tm",   cmd: "node src/fetchers/ticketmaster.js" },
+    { name: "fetch:sg",   cmd: "node src/fetchers/seatgeek.js" },
+    { name: "fetch:jazz", cmd: "node src/fetchers/jazz-nyc.js" },
+    { name: "ingest",     cmd: "node db/ingest.js" },
   ];
 
   for (const step of steps) {

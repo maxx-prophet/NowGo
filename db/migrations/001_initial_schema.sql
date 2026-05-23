@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS venues (
 
 -- GIST index for ST_DWithin / ST_Distance queries
 CREATE INDEX IF NOT EXISTS venues_geo_idx ON venues USING GIST (geo);
-CREATE INDEX IF NOT EXISTS venues_name_idx ON venues (lower(name));
+CREATE UNIQUE INDEX IF NOT EXISTS venues_name_idx ON venues (lower(name));
 
 -- ─── EVENTS ───────────────────────────────────────────────────────────────────
 

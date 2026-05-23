@@ -20,7 +20,8 @@ function getTonightWindow() {
   start.setHours(17, 0, 0, 0);
   const end = new Date(now);
   end.setDate(end.getDate() + (now.getHours() < 2 ? 0 : 1));
-  end.setHours(26, 0, 0, 0);
+  end.setDate(end.getDate() + 1)
+  end.setHours(2, 0, 0, 0)
   return {
     start: start.toISOString().split(".")[0],
     end: end.toISOString().split(".")[0],

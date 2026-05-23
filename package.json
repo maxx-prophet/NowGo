@@ -6,14 +6,14 @@
     "server": "node src/server.js",
     "fetch:tm": "node src/fetchers/ticketmaster.js",
     "fetch:sg": "node src/fetchers/seatgeek.js",
-    "fetch:parks": "node src/fetchers/nyc-parks.js",
-    "fetch:eb": "node src/fetchers/eventbrite.js"
+    "fetch:jazz": "node src/fetchers/jazz-nyc.js"
   },
   "dependencies": {
     "dotenv": "^16.0.0",
     "express": "^5.2.1",
     "node-cron": "^4.2.1",
     "node-fetch": "^3.0.0",
+    "node-html-parser": "^7.1.0",
     "pg": "^8.20.0"
   }
 }

@@ -79,8 +79,8 @@ app.get("/events/tonight", async (req, res) => {
           round(ST_Distance(v.geo, ST_MakePoint($2, $1)::geography)::numeric) AS distance_m
         FROM events e
         LEFT JOIN venues v ON e.venue_id = v.venue_id
-        WHERE e.start_time::date = CURRENT_DATE
-          AND e.start_time > NOW() - interval '30 minutes'
+        WHERE e.start_time > NOW() - interval '30 minutes'
+          AND e.start_time < NOW() + interval '18 hours'
           AND e.availability_tier != 'cancelled'
           AND ($5::text IS NULL OR e.segment = $5)
           AND (v.geo IS NULL OR ST_DWithin(v.geo, ST_MakePoint($2, $1)::geography, $3 * 1609.34))
@@ -98,8 +98,8 @@ app.get("/events/tonight", async (req, res) => {
           v.neighborhood
         FROM events e
         LEFT JOIN venues v ON e.venue_id = v.venue_id
-        WHERE e.start_time::date = CURRENT_DATE
-          AND e.start_time > NOW() - interval '30 minutes'
+        WHERE e.start_time > NOW() - interval '30 minutes'
+          AND e.start_time < NOW() + interval '18 hours'
           AND e.availability_tier != 'cancelled'
           AND ($2::text IS NULL OR e.segment = $2)
         ORDER BY e.start_time ASC

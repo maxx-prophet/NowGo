@@ -2,7 +2,7 @@ import fs from "fs";
 import pool from "./index.js";
 
 // Pick the most recently modified events file
-const CANDIDATES = ["data/events-tonight-final.json", "data/events-tonight-merged.json", "data/events-tonight.json"];
+const CANDIDATES = ["data/events-tonight-enriched.json", "data/events-tonight-final.json", "data/events-tonight-merged.json", "data/events-tonight.json"];
 const INPUT = CANDIDATES
   .filter(fs.existsSync)
   .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
@@ -99,17 +99,6 @@ async function ingest() {
   let ok = 0, skipped = 0;
 
   try {
-    // Add unique constraint on venue name if not exists
-    await client.query(`
-      DO $$ BEGIN
-        IF NOT EXISTS (
-          SELECT 1 FROM pg_constraint WHERE conname = 'venues_name_key'
-        ) THEN
-          ALTER TABLE venues ADD CONSTRAINT venues_name_key UNIQUE (name);
-        END IF;
-      END $$;
-    `);
-
     for (const event of events) {
       try {
         await client.query("BEGIN");
