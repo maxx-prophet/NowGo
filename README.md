@@ -2,7 +2,7 @@
 
 **NowGo** is a NYC event discovery app that surfaces what's happening tonight and tells you exactly when to leave based on your real-time travel time.
 
-It aggregates events from multiple sources (Ticketmaster, SeatGeek, Bandsintown, Eventbrite, Jazz NYC, NYC Parks), stores them in a PostGIS-enabled PostgreSQL database, and serves them through a REST API consumed by a React Native mobile app.
+It aggregates events from Ticketmaster, SeatGeek, and Jazz NYC, stores them in a PostGIS-enabled PostgreSQL database, and serves them through a REST API consumed by a React Native mobile app.
 
 ---
 
@@ -194,3 +194,40 @@ Three core tables in PostgreSQL + PostGIS:
 - **`venues`** — normalized venue records with a `GEOGRAPHY(POINT)` geo column for radius queries
 - **`events`** — deduplicated event records with pricing, availability tier, and segment/genre taxonomy
 - **`availability_snapshots`** — append-only log of price and availability changes
+
+---
+
+## Troubleshooting
+
+**`psql` connection fails with password containing `!`**
+The shell interprets `!` as a history command. Use single quotes:
+```bash
+psql 'postgresql://user:passw0rd!@host:5432/db'
+```
+
+**`ingest` skips all events: "no unique or exclusion constraint matching ON CONFLICT"**
+The venue unique index must be on `name` exactly, not `lower(name)`. Connect to your DB and run:
+```sql
+DROP INDEX IF EXISTS venues_name_idx;
+CREATE UNIQUE INDEX venues_name_idx ON venues (name);
+```
+
+**Railway Postgres connection refused**
+`DATABASE_URL` isn't loaded automatically from `.env.nowgo` in the shell. Paste it directly into the `psql` command, or prefix your command with `source .env.nowgo &&`.
+
+**Mobile app shows no events / fetch failed**
+- Check `mobile/src/api/nowgo.js` — the variable must be named `API_BASE` (not `BASE_URL`)
+- Make sure the URL starts with `https://`
+- Confirm the backend is up: `curl https://your-railway-url.up.railway.app/health`
+- Run the fetch + ingest pipeline to populate the database: `npm run fetch:tm && npm run fetch:sg && npm run fetch:jazz && npm run ingest`
+
+**Expo simulator "TypeError: fetch failed" when pressing `i`**
+Expo CLI can't download Expo Go to the simulator. Enable Developer Mode in the simulator settings and try again, or run `npx expo start --tunnel` to route through Expo's servers.
+
+**GitHub push blocked by secret scanning**
+If a token was committed, revoke it immediately at github.com → Settings → Developer Settings → Personal Access Tokens. Then remove it from history:
+```bash
+git filter-branch --force --index-filter "git rm --cached --ignore-unmatch 'filename'" --prune-empty --tag-name-filter cat -- --all
+git push origin main --force
+```
+Always store secrets in `.env.nowgo` — it is gitignored.
