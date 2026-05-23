@@ -1,27 +1,20 @@
 import fetch from "node-fetch";
 import fs from "fs";
 import dotenv from "dotenv";
+import { fileURLToPath } from "url";
 dotenv.config({ path: ".env.nowgo" });
 
-const SG_CLIENT_ID = process.env.SEATGEEK_CLIENT_ID;
-const SG_CLIENT_SECRET = process.env.SEATGEEK_CLIENT_SECRET;
 const NYC_LAT = 40.758;
 const NYC_LNG = -73.9855;
 const RADIUS_MILES = 10;
-
-if (!SG_CLIENT_ID || !SG_CLIENT_SECRET) {
-  console.error("❌ Missing SEATGEEK_CLIENT_ID or SEATGEEK_CLIENT_SECRET in .env.nowgo");
-  process.exit(1);
-}
 
 function getTonightWindow() {
   const now = new Date();
   const start = new Date(now);
   start.setHours(17, 0, 0, 0);
   const end = new Date(now);
-  end.setDate(end.getDate() + (now.getHours() < 2 ? 0 : 1));
-  end.setDate(end.getDate() + 1)
-  end.setHours(2, 0, 0, 0)
+  end.setDate(end.getDate() + 1);
+  end.setHours(2, 0, 0, 0);
   return {
     start: start.toISOString().split(".")[0],
     end: end.toISOString().split(".")[0],
@@ -94,7 +87,7 @@ function mapSGAvailability(e) {
 
 // ─── MERGE ───────────────────────────────────────────────────────────────────
 
-function mergeEvents(tmEvents, sgEvents) {
+export function mergeEvents(tmEvents, sgEvents) {
   const merged = [...tmEvents];
   const usedSgIds = new Set();
 
@@ -123,18 +116,25 @@ function mergeEvents(tmEvents, sgEvents) {
 
   const sgOnlyEvents = sgEvents.filter((sg) => !usedSgIds.has(sg.id));
   console.log(`   🔀 Merged prices into ${usedSgIds.size} TM events`);
-  console.log(`   ➕ Adding ${sgOnlyEvents.length} SeatGeek-only events\n`);
+  console.log(`   ➕ Adding ${sgOnlyEvents.length} SeatGeek-only events`);
   return [...merged, ...sgOnlyEvents];
 }
 
 // ─── FETCH ───────────────────────────────────────────────────────────────────
 
-async function fetchSeatGeek() {
+export async function fetchSeatGeek(tmEvents = []) {
+  const clientId = process.env.SEATGEEK_CLIENT_ID;
+  const clientSecret = process.env.SEATGEEK_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error("Missing SEATGEEK_CLIENT_ID or SEATGEEK_CLIENT_SECRET in .env.nowgo");
+  }
+
   const { start, end } = getTonightWindow();
 
   const url = new URL("https://api.seatgeek.com/2/events");
-  url.searchParams.set("client_id", SG_CLIENT_ID);
-  url.searchParams.set("client_secret", SG_CLIENT_SECRET);
+  url.searchParams.set("client_id", clientId);
+  url.searchParams.set("client_secret", clientSecret);
   url.searchParams.set("lat", NYC_LAT);
   url.searchParams.set("lon", NYC_LNG);
   url.searchParams.set("range", `${RADIUS_MILES}mi`);
@@ -144,7 +144,7 @@ async function fetchSeatGeek() {
   url.searchParams.set("sort", "datetime_local.asc");
 
   console.log("\n📡 Fetching SeatGeek...");
-  console.log(`   Window: ${start} → ${end}\n`);
+  console.log(`   Window: ${start} → ${end}`);
 
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`SeatGeek API error: ${res.status} ${res.statusText}`);
@@ -154,79 +154,40 @@ async function fetchSeatGeek() {
   console.log(`   ✅ Got ${raw.length} raw events`);
 
   const filtered = raw.filter((e) => e.status !== "canceled");
-  console.log(`   🧹 ${filtered.length} after filtering cancelled\n`);
+  console.log(`   🧹 ${filtered.length} after filtering cancelled`);
 
-  return filtered.map(normalizeSeatGeekEvent);
+  const sgEvents = filtered.map(normalizeSeatGeekEvent);
+  return mergeEvents(tmEvents, sgEvents);
 }
 
-// ─── REPORT ──────────────────────────────────────────────────────────────────
-
-function printSummary(events) {
-  console.log("─────────────────────────────────────────");
-  console.log(`🗽 TONIGHT IN NYC — ${events.length} total events (TM + SeatGeek)\n`);
-
-  const priceGaps = events.filter((e) => e.priceMin === null);
-  const pricedBySG = events.filter((e) => e._pricedBy === "seatgeek");
-  const bySegment = {};
-
-  events.forEach((e) => {
-    const seg = e.genre ?? e.segment ?? "Other";
-    bySegment[seg] = (bySegment[seg] || 0) + 1;
-  });
-
-  events.slice(0, 10).forEach((e, i) => {
-    const price = e.isFree ? "FREE" : e.priceMin ? `$${e.priceMin}–$${e.priceMax}` : "price unknown";
-    const time = e.time ? e.time.slice(0, 5) : "TBD";
-    const src = e.source === "seatgeek" ? "SG" : "TM";
-    console.log(`  ${i + 1}. [${src}] ${e.name}`);
-    console.log(`     📍 ${e.venue} | ⏰ ${time} | 💵 ${price} | ${e.availabilityTier}\n`);
-  });
-
-  console.log("📊 Breakdown by genre:");
-  Object.entries(bySegment)
-    .sort((a, b) => b[1] - a[1])
-    .forEach(([g, n]) => console.log(`   ${g}: ${n}`));
-
-  console.log(`\n✅ Price filled by SeatGeek: ${pricedBySG.length} events`);
-  console.log(`⚠️  Still missing price: ${priceGaps.length} events`);
-  console.log("─────────────────────────────────────────\n");
-}
-
-// ─── MAIN ────────────────────────────────────────────────────────────────────
+// ─── MAIN (CLI only) ──────────────────────────────────────────────────────────
 
 async function main() {
   console.log("🚀 NowGo — SeatGeek Fetcher + TM Merge");
-
   try {
     let tmEvents = [];
     if (fs.existsSync("data/events-tonight.json")) {
       const tmData = JSON.parse(fs.readFileSync("data/events-tonight.json", "utf8"));
       tmEvents = tmData.events ?? [];
       console.log(`📂 Loaded ${tmEvents.length} TM events from data/events-tonight.json`);
-    } else {
-      console.log("⚠️  No data/events-tonight.json found — run npm run fetch:tm first");
     }
 
-    const sgEvents = await fetchSeatGeek();
-    const merged = mergeEvents(tmEvents, sgEvents);
-    printSummary(merged);
-
+    const merged = await fetchSeatGeek(tmEvents);
     const output = {
       fetchedAt: new Date().toISOString(),
       sources: ["ticketmaster", "seatgeek"],
       count: merged.length,
-      tmCount: tmEvents.length,
-      sgCount: sgEvents.length,
       events: merged,
     };
-
     fs.mkdirSync("data", { recursive: true });
     fs.writeFileSync("data/events-tonight-merged.json", JSON.stringify(output, null, 2));
-    console.log("💾 Saved to data/events-tonight-merged.json");
+    console.log(`💾 Saved ${merged.length} events to data/events-tonight-merged.json`);
   } catch (err) {
     console.error("❌ Error:", err.message);
     process.exit(1);
   }
 }
 
-main();
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main();
+}

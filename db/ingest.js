@@ -1,11 +1,7 @@
 import fs from "fs";
 import pool from "./index.js";
 
-// Pick the most recently modified events file
-const CANDIDATES = ["data/events-tonight-enriched.json", "data/events-tonight-final.json", "data/events-tonight-merged.json", "data/events-tonight.json"];
-const INPUT = CANDIDATES
-  .filter(fs.existsSync)
-  .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
+// ─── UPSERT HELPERS ───────────────────────────────────────────────────────────
 
 async function upsertVenue(client, event) {
   if (!event.venue) return null;
@@ -16,7 +12,7 @@ async function upsertVenue(client, event) {
     `INSERT INTO venues (name, address, neighborhood, geo)
      VALUES ($1, $2, $3, $4)
      ON CONFLICT (name) DO UPDATE
-       SET address     = COALESCE(EXCLUDED.address, venues.address),
+       SET address      = COALESCE(EXCLUDED.address, venues.address),
            neighborhood = COALESCE(EXCLUDED.neighborhood, venues.neighborhood),
            geo          = COALESCE(EXCLUDED.geo, venues.geo),
            updated_at   = now()
@@ -78,7 +74,6 @@ async function upsertEvent(client, event, venueId) {
     ]
   );
 
-  // Append availability snapshot
   await client.query(
     `INSERT INTO availability_snapshots (event_id, availability_tier, price_min, price_max)
      VALUES ($1, $2, $3, $4)`,
@@ -86,15 +81,9 @@ async function upsertEvent(client, event, venueId) {
   );
 }
 
-async function ingest() {
-  if (!fs.existsSync(INPUT)) {
-    console.error(`❌ ${INPUT} not found — run fetchers first`);
-    process.exit(1);
-  }
+// ─── EXPORTED FUNCTION (used by scheduler) ────────────────────────────────────
 
-  const { events } = JSON.parse(fs.readFileSync(INPUT, "utf8"));
-  console.log(`📂 Ingesting ${events.length} events from ${INPUT}...`);
-
+export async function ingestEvents(events) {
   const client = await pool.connect();
   let ok = 0, skipped = 0;
 
@@ -114,13 +103,42 @@ async function ingest() {
     }
   } finally {
     client.release();
-    await pool.end();
   }
 
   console.log(`✅ Ingested ${ok} events, skipped ${skipped}`);
+  return { ok, skipped };
 }
 
-ingest().catch((err) => {
-  console.error("❌ Ingest failed:", err.message);
-  process.exit(1);
-});
+// ─── MAIN (CLI only) ──────────────────────────────────────────────────────────
+
+const CANDIDATES = [
+  "data/events-tonight-enriched.json",
+  "data/events-tonight-final.json",
+  "data/events-tonight-merged.json",
+  "data/events-tonight.json",
+];
+
+async function main() {
+  const input = CANDIDATES
+    .filter(fs.existsSync)
+    .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
+
+  if (!input) {
+    console.error("❌ No events file found — run fetchers first");
+    process.exit(1);
+  }
+
+  const { events } = JSON.parse(fs.readFileSync(input, "utf8"));
+  console.log(`📂 Ingesting ${events.length} events from ${input}...`);
+
+  await ingestEvents(events);
+  await pool.end();
+}
+
+import { fileURLToPath } from "url";
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((err) => {
+    console.error("❌ Ingest failed:", err.message);
+    process.exit(1);
+  });
+}

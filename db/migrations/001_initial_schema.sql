@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS sources (
 INSERT INTO sources (source_id, display_name, api_base_url) VALUES
   ('ticketmaster', 'Ticketmaster', 'https://app.ticketmaster.com/discovery/v2'),
   ('seatgeek',     'SeatGeek',     'https://api.seatgeek.com/2'),
-  ('nyc_parks',    'NYC Parks',    'https://www.nycgovparks.org/api')
+  ('jazz_nyc',     'Jazz NYC',     'https://www.jazz-nyc.com')
 ON CONFLICT (source_id) DO NOTHING;
 
 -- ─── VENUES ───────────────────────────────────────────────────────────────────

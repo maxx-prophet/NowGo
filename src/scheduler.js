@@ -1,40 +1,33 @@
 import cron from "node-cron";
-import { exec } from "child_process";
-import { promisify } from "util";
-
-const execAsync = promisify(exec);
+import { fetchTicketmaster } from "./fetchers/ticketmaster.js";
+import { fetchSeatGeek } from "./fetchers/seatgeek.js";
+import { fetchJazzNYC } from "./fetchers/jazz-nyc.js";
+import { ingestEvents } from "../db/ingest.js";
 
 // ─── PIPELINE ────────────────────────────────────────────────────────────────
 
-async function runPipeline() {
+export async function runPipeline() {
   const started = new Date().toISOString();
-  console.log(`\n⏰ [${started}] Scheduler: starting fetch → ingest pipeline`);
+  console.log(`\n⏰ [${started}] Pipeline starting...`);
 
-  const steps = [
-    { name: "fetch:tm",   cmd: "node src/fetchers/ticketmaster.js" },
-    { name: "fetch:sg",   cmd: "node src/fetchers/seatgeek.js" },
-    { name: "fetch:jazz", cmd: "node src/fetchers/jazz-nyc.js" },
-    { name: "ingest",     cmd: "node db/ingest.js" },
-  ];
+  try {
+    const tmEvents = await fetchTicketmaster();
+    console.log(`  ✅ Ticketmaster: ${tmEvents.length} events`);
 
-  for (const step of steps) {
-    try {
-      console.log(`  ▶ ${step.name}...`);
-      const { stdout, stderr } = await execAsync(step.cmd, { cwd: process.cwd() });
-      // Pull the key summary line from each script's output
-      const summary = (stdout + stderr)
-        .split("\n")
-        .filter((l) => l.match(/✅|💾|Ingested|Got \d+/))
-        .slice(0, 2)
-        .join(" | ");
-      console.log(`  ✅ ${step.name}: ${summary || "done"}`);
-    } catch (err) {
-      console.error(`  ❌ ${step.name} failed: ${err.message.split("\n")[0]}`);
-      // Continue to next step even if one fails
-    }
+    const mergedEvents = await fetchSeatGeek(tmEvents);
+    console.log(`  ✅ SeatGeek merged: ${mergedEvents.length} total events`);
+
+    const jazzEvents = await fetchJazzNYC();
+    console.log(`  ✅ Jazz NYC: ${jazzEvents.length} events`);
+
+    const allEvents = [...mergedEvents, ...jazzEvents];
+    console.log(`  💾 Ingesting ${allEvents.length} events...`);
+
+    const { ok, skipped } = await ingestEvents(allEvents);
+    console.log(`  🏁 Pipeline complete — ${ok} ingested, ${skipped} skipped [${new Date().toISOString()}]\n`);
+  } catch (err) {
+    console.error(`  ❌ Pipeline failed: ${err.message}\n`);
   }
-
-  console.log(`  🏁 Pipeline complete [${new Date().toISOString()}]\n`);
 }
 
 // ─── SCHEDULE ─────────────────────────────────────────────────────────────────
@@ -54,5 +47,3 @@ export function startScheduler() {
     cron.schedule(expression, runPipeline, { timezone: "America/New_York" });
   });
 }
-
-export { runPipeline };

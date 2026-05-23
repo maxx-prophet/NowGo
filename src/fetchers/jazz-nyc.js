@@ -1,5 +1,6 @@
 import fetch from "node-fetch";
 import fs from "fs";
+import { fileURLToPath } from "url";
 
 const NYC_AREAS = new Set(["MT", "BK", "BX", "QU", "SI"]);
 
@@ -48,10 +49,10 @@ function makeId(date, time, venue, performer) {
 
 function normalizeRow(date, timeStr, area, venue, performer) {
   const { time } = parseTime(timeStr);
-  // Append Eastern time offset so ingest stores correct UTC
-   const nycOffsetStr = new Date().toLocaleString('en-US', { timeZone: 'America/New_York', timeZoneName: 'shortOffset' }).match(/GMT([+-]\d+)/)?.[1];
-  const nycOffset = nycOffsetStr ? `${parseInt(nycOffsetStr) >= 0 ? '+' : '-'}${String(Math.abs(parseInt(nycOffsetStr))).padStart(2, '0')}:00` : '-04:00';
+  const nycOffsetStr = new Date().toLocaleString("en-US", { timeZone: "America/New_York", timeZoneName: "shortOffset" }).match(/GMT([+-]\d+)/)?.[1];
+  const nycOffset = nycOffsetStr ? `${parseInt(nycOffsetStr) >= 0 ? "+" : "-"}${String(Math.abs(parseInt(nycOffsetStr))).padStart(2, "0")}:00` : "-04:00";
   const timeWithTz = time ? `${time}${nycOffset}` : null;
+
   return {
     id: makeId(date, time, venue, performer),
     source: "jazz_nyc",
@@ -88,12 +89,12 @@ function normalizeRow(date, timeStr, area, venue, performer) {
 
 // ─── FETCH ───────────────────────────────────────────────────────────────────
 
-async function fetchJazzNYC() {
+export async function fetchJazzNYC() {
   const today = new Date();
   const todayStr = `${String(today.getMonth() + 1).padStart(2, "0")}/${String(today.getDate()).padStart(2, "0")}/${String(today.getFullYear()).slice(2)}`;
 
   console.log("\n📡 Fetching Jazz NYC...");
-  console.log(`   Looking for date: ${todayStr}\n`);
+  console.log(`   Looking for date: ${todayStr}`);
 
   const res = await fetch("https://www.jazz-nyc.com/index.php", {
     headers: { "User-Agent": "Mozilla/5.0 (compatible; NowGo/1.0)" },
@@ -103,13 +104,11 @@ async function fetchJazzNYC() {
 
   const html = await res.text();
 
-  // Page has duplicate DOCTYPE — use indexOf to extract tbody (regex chokes on 313KB)
   const tbodyStart = html.indexOf("<tbody>");
   const tbodyEnd = html.indexOf("</tbody>", tbodyStart);
   if (tbodyStart === -1) throw new Error("Could not find table body in jazz-nyc.com response");
 
   const tbody = html.slice(tbodyStart + 7, tbodyEnd);
-  // Rows have no closing </tr> — split by opening <tr> tag
   const rows = tbody.split("<tr>").slice(1);
   console.log(`   Found ${rows.length} table rows`);
 
@@ -146,41 +145,11 @@ async function fetchJazzNYC() {
   return events;
 }
 
-// ─── REPORT ──────────────────────────────────────────────────────────────────
-
-function printSummary(events) {
-  console.log("─────────────────────────────────────────");
-  console.log(`🎷 JAZZ NYC — ${events.length} events tonight\n`);
-
-  events.slice(0, 10).forEach((e, i) => {
-    const time = e.time ? e.time.slice(0, 5) : "TBD";
-    console.log(`  ${i + 1}. ${e.name}`);
-    console.log(`     📍 ${e.venue} (${e.neighborhood}) | ⏰ ${time}\n`);
-  });
-
-  if (events.length > 10) console.log(`  ... and ${events.length - 10} more\n`);
-  console.log("─────────────────────────────────────────\n");
-}
-
-// ─── MAIN ────────────────────────────────────────────────────────────────────
-
-function mergeWithExisting(existingEvents, jazzEvents) {
-  const existingKeys = new Set(
-    existingEvents.map((e) => `${(e.venue ?? "").toLowerCase().slice(0, 12)}_${e.date}_${(e.time ?? "").slice(0, 5)}`)
-  );
-  const newOnly = jazzEvents.filter((e) => {
-    const key = `${(e.venue ?? "").toLowerCase().slice(0, 12)}_${e.date}_${(e.time ?? "").slice(0, 5)}`;
-    return !existingKeys.has(key);
-  });
-  console.log(`   ➕ Adding ${newOnly.length} Jazz NYC-only events (${jazzEvents.length - newOnly.length} duplicates skipped)\n`);
-  return [...existingEvents, ...newOnly];
-}
+// ─── MAIN (CLI only) ──────────────────────────────────────────────────────────
 
 async function main() {
   console.log("🚀 NowGo — Jazz NYC Scraper");
-
   try {
-    // Load existing merged events
     let existingEvents = [];
     const inputPath = fs.existsSync("data/events-tonight-merged.json")
       ? "data/events-tonight-merged.json"
@@ -195,8 +164,14 @@ async function main() {
     }
 
     const jazzEvents = await fetchJazzNYC();
-    printSummary(jazzEvents);
-    const finalEvents = mergeWithExisting(existingEvents, jazzEvents);
+    const existingKeys = new Set(
+      existingEvents.map((e) => `${(e.venue ?? "").toLowerCase().slice(0, 12)}_${e.date}_${(e.time ?? "").slice(0, 5)}`)
+    );
+    const newOnly = jazzEvents.filter((e) => {
+      const key = `${(e.venue ?? "").toLowerCase().slice(0, 12)}_${e.date}_${(e.time ?? "").slice(0, 5)}`;
+      return !existingKeys.has(key);
+    });
+    const finalEvents = [...existingEvents, ...newOnly];
 
     const output = {
       fetchedAt: new Date().toISOString(),
@@ -205,7 +180,6 @@ async function main() {
       jazzCount: jazzEvents.length,
       events: finalEvents,
     };
-
     fs.mkdirSync("data", { recursive: true });
     fs.writeFileSync("data/events-tonight-final.json", JSON.stringify(output, null, 2));
     console.log(`💾 Saved ${finalEvents.length} total events to data/events-tonight-final.json`);
@@ -215,4 +189,6 @@ async function main() {
   }
 }
 
-main();
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main();
+}
