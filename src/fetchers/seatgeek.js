@@ -29,15 +29,24 @@ function normalizeSeatGeekEvent(e) {
 
   const segmentMap = {
     concert: "Music",
+    music_festival: "Music",
     sports: "Sports",
+    wrestling: "Sports",
+    football: "Sports",
+    baseball: "Sports",
+    basketball: "Sports",
+    hockey: "Sports",
     theater: "Arts & Theatre",
+    broadway: "Arts & Theatre",
     comedy: "Arts & Theatre",
     classical: "Arts & Theatre",
     dance_performance_tour: "Arts & Theatre",
-    family: "Family",
+    entertainment: "Arts & Theatre",
     film: "Arts & Theatre",
+    family: "Family",
   };
-  const segment = segmentMap[e.type ?? ""] ?? e.type ?? "Other";
+  const rawType = e.type ?? "";
+  const segment = segmentMap[rawType] ?? (rawType && rawType !== "Undefined" ? rawType : null);
 
   return {
     id: `sg_${e.id}`,
@@ -56,8 +65,8 @@ function normalizeSeatGeekEvent(e) {
     lng: venue?.location?.lon ?? null,
 
     segment,
-    genre: performer?.genres?.[0]?.name ?? null,
-    subGenre: performer?.genres?.[1]?.name ?? null,
+    genre: performer?.genres?.[0]?.name !== "Undefined" ? (performer?.genres?.[0]?.name ?? null) : null,
+    subGenre: performer?.genres?.[1]?.name !== "Undefined" ? (performer?.genres?.[1]?.name ?? null) : null,
 
     priceMin: e.stats?.lowest_price ?? null,
     priceMax: e.stats?.highest_price ?? null,
@@ -87,35 +96,50 @@ function mapSGAvailability(e) {
 
 // ─── MERGE ───────────────────────────────────────────────────────────────────
 
+function norm(s) {
+  return (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function stringsOverlap(a, b) {
+  const na = norm(a);
+  const nb = norm(b);
+  if (!na || !nb) return false;
+  // Full containment in either direction handles abbreviations and suffixes
+  if (na.includes(nb) || nb.includes(na)) return true;
+  // Prefix match at the length of the shorter string
+  const len = Math.min(na.length, nb.length);
+  return na.slice(0, len) === nb.slice(0, len);
+}
+
 export function mergeEvents(tmEvents, sgEvents) {
   const merged = [...tmEvents];
   const usedSgIds = new Set();
+  let pricesFilled = 0;
 
   merged.forEach((tmEvent) => {
     if (tmEvent.priceMin !== null) return;
 
     const match = sgEvents.find((sg) => {
       if (usedSgIds.has(sg.id)) return false;
-      const venueMatch = (() => {
-        if (!sg.venue || !tmEvent.venue) return false;
-        const a = sg.venue.toLowerCase().replace(/[^a-z0-9]/g, "");
-        const b = tmEvent.venue.toLowerCase().replace(/[^a-z0-9]/g, "");
-        return a.includes(b.slice(0, 12)) || b.includes(a.slice(0, 12));
-      })();
-      return venueMatch && sg.date === tmEvent.date;
+      if (sg.date !== tmEvent.date) return false;
+      return stringsOverlap(sg.venue, tmEvent.venue) || stringsOverlap(sg.name, tmEvent.name);
     });
 
     if (match) {
-      tmEvent.priceMin = match.priceMin;
-      tmEvent.priceMax = match.priceMax;
+      if (match.priceMin !== null) {
+        tmEvent.priceMin = match.priceMin;
+        tmEvent.priceMax = match.priceMax;
+        tmEvent.isFree = match.priceMin === 0;
+        tmEvent._pricedBy = "seatgeek";
+        pricesFilled++;
+      }
       tmEvent.availabilityTier = match.availabilityTier;
-      tmEvent._pricedBy = "seatgeek";
       usedSgIds.add(match.id);
     }
   });
 
   const sgOnlyEvents = sgEvents.filter((sg) => !usedSgIds.has(sg.id));
-  console.log(`   🔀 Merged prices into ${usedSgIds.size} TM events`);
+  console.log(`   🔀 Matched ${usedSgIds.size} SeatGeek events (${pricesFilled} price fills)`);
   console.log(`   ➕ Adding ${sgOnlyEvents.length} SeatGeek-only events`);
   return [...merged, ...sgOnlyEvents];
 }

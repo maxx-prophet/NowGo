@@ -50,12 +50,12 @@ function normalizeTicketmasterEvent(e) {
 
     segment: rawSegment && rawSegment !== "Undefined" ? rawSegment : null,
     genre: rawGenre && rawGenre !== "Undefined" ? rawGenre : null,
-    subGenre: classification?.subGenre?.name ?? null,
+    subGenre: classification?.subGenre?.name !== "Undefined" ? (classification?.subGenre?.name ?? null) : null,
 
     priceMin: price?.min ?? null,
     priceMax: price?.max ?? null,
     currency: price?.currency ?? "USD",
-    isFree: price == null,
+    isFree: price != null && price.min === 0,
 
     status: e.dates?.status?.code ?? null,
     availabilityTier: mapAvailability(e.dates?.status?.code),

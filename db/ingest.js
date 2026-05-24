@@ -1,6 +1,32 @@
 import fs from "fs";
 import pool from "./index.js";
 
+function parseNYCDateTime(dateStr, timeStr = '00:00:00') {
+  // TM/SG give us local NYC time strings — we must convert to UTC correctly.
+  // `new Date("2026-05-24T13:35:00")` treats the string as *server* local time
+  // (UTC on Railway), so it stores 4h early during EDT. Fix: use Intl to find
+  // the actual Eastern→UTC offset for that specific date (handles DST).
+  const naive = new Date(`${dateStr}T${timeStr}Z`); // treat input as UTC first
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false,
+  }).formatToParts(naive).reduce((a, p) => ({ ...a, [p.type]: p.value }), {});
+  const nyAsUTC = new Date(Date.UTC(
+    +parts.year, +parts.month - 1, +parts.day,
+    parts.hour === '24' ? 0 : +parts.hour,
+    +parts.minute, +parts.second,
+  ));
+  return new Date(naive.getTime() + (naive - nyAsUTC));
+}
+
+function clean(val) {
+  if (val == null) return null;
+  if (typeof val === "string" && (val.toLowerCase() === "undefined" || val.trim() === "")) return null;
+  return val;
+}
+
 // ─── UPSERT HELPERS ───────────────────────────────────────────────────────────
 
 async function upsertVenue(client, event) {
@@ -28,10 +54,8 @@ async function upsertVenue(client, event) {
 }
 
 async function upsertEvent(client, event, venueId) {
-  const startTime = event.date && event.time
-    ? new Date(`${event.date}T${event.time}`)
-    : event.date
-    ? new Date(`${event.date}T00:00:00`)
+  const startTime = event.date
+    ? parseNYCDateTime(event.date, event.time ?? '00:00:00')
     : null;
 
   if (!startTime || isNaN(startTime)) return;
@@ -48,7 +72,7 @@ async function upsertEvent(client, event, venueId) {
        venue_id          = COALESCE(EXCLUDED.venue_id, events.venue_id),
        start_time        = EXCLUDED.start_time,
        url               = COALESCE(EXCLUDED.url, events.url),
-       segment           = COALESCE(EXCLUDED.segment, events.segment),
+       segment           = EXCLUDED.segment,
        genre             = COALESCE(EXCLUDED.genre, events.genre),
        price_min         = COALESCE(EXCLUDED.price_min, events.price_min),
        price_max         = COALESCE(EXCLUDED.price_max, events.price_max),
@@ -63,9 +87,9 @@ async function upsertEvent(client, event, venueId) {
       venueId,
       startTime.toISOString(),
       event.url ?? null,
-      event.segment ?? null,
-      event.genre ?? null,
-      event.subGenre ?? null,
+      clean(event.segment),
+      clean(event.genre),
+      clean(event.subGenre),
       event.priceMin ?? null,
       event.priceMax ?? null,
       event.currency ?? "USD",

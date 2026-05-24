@@ -7,7 +7,7 @@ import * as Location from "expo-location";
 import EventCard from "../components/EventCard";
 import { fetchTonightEvents } from "../api/nowgo";
 
-const SEGMENTS = ["All", "Music", "Theatre", "Sports", "Arts & Theatre", "Comedy", "Family"];
+const SEGMENTS = ["All", "Music", "Arts & Theatre", "Sports", "Comedy", "Family"];
 
 export default function TonightFeed({ navigation }) {
   const [events, setEvents] = useState([]);
