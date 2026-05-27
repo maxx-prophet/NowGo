@@ -55,7 +55,8 @@ function normalizeTicketmasterEvent(e) {
     priceMin: price?.min ?? null,
     priceMax: price?.max ?? null,
     currency: price?.currency ?? "USD",
-    isFree: price != null && price.min === 0,
+    isFree: price != null && price.min === 0 && (price.max == null || price.max === 0)
+           && (!e.url || e.url.includes("ticketmaster.com") || e.url.includes("ticketweb.com")),
 
     status: e.dates?.status?.code ?? null,
     availabilityTier: mapAvailability(e.dates?.status?.code),

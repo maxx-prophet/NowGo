@@ -3,6 +3,7 @@ import { fetchTicketmaster } from "./fetchers/ticketmaster.js";
 import { fetchSeatGeek } from "./fetchers/seatgeek.js";
 import { fetchJazzNYC } from "./fetchers/jazz-nyc.js";
 import { ingestEvents } from "../db/ingest.js";
+import { runAvailabilityCheck } from "./services/availability.js";
 
 // ─── PIPELINE ────────────────────────────────────────────────────────────────
 
@@ -24,7 +25,10 @@ export async function runPipeline() {
     console.log(`  💾 Ingesting ${allEvents.length} events...`);
 
     const { ok, skipped } = await ingestEvents(allEvents);
-    console.log(`  🏁 Pipeline complete — ${ok} ingested, ${skipped} skipped [${new Date().toISOString()}]\n`);
+    console.log(`  💾 Ingested ${ok} events, skipped ${skipped}`);
+
+    await runAvailabilityCheck();
+    console.log(`  🏁 Pipeline complete [${new Date().toISOString()}]\n`);
   } catch (err) {
     console.error(`  ❌ Pipeline failed: ${err.message}\n`);
   }

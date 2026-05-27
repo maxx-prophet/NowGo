@@ -2,13 +2,15 @@
   "type": "module",
   "scripts": {
     "migrate": "node db/migrate.js",
-    "ingest": "node db/ingest.js",
+    "pipeline": "node -e \"import('./src/scheduler.js').then(m => m.runPipeline()).then(() => process.exit(0))\"",
     "server": "node src/server.js",
     "fetch:tm": "node src/fetchers/ticketmaster.js",
     "fetch:sg": "node src/fetchers/seatgeek.js",
-    "fetch:jazz": "node src/fetchers/jazz-nyc.js"
+    "fetch:jazz": "node src/fetchers/jazz-nyc.js",
+    "availability": "node -e \"import('./src/services/availability.js').then(m => m.runAvailabilityCheck()).then(() => process.exit(0))\""
   },
   "dependencies": {
+    "@upstash/redis": "^1.38.0",
     "dotenv": "^16.0.0",
     "exp": "^55.0.5",
     "express": "^5.2.1",
