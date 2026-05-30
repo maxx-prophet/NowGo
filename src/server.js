@@ -80,7 +80,7 @@ app.get("/events/tonight", async (req, res) => {
         FROM events e
         LEFT JOIN venues v ON e.venue_id = v.venue_id
         WHERE e.start_time > NOW() - interval '30 minutes'
-          AND e.start_time < NOW() + interval '18 hours'
+          AND e.start_time < (date_trunc('day', NOW() AT TIME ZONE 'America/New_York') + interval '1 day 4 hours') AT TIME ZONE 'America/New_York'
           AND e.availability_tier != 'cancelled'
           AND ($5::text IS NULL OR e.segment = $5)
           AND (v.geo IS NULL OR ST_DWithin(v.geo, ST_MakePoint($2, $1)::geography, $3 * 1609.34))
@@ -99,7 +99,7 @@ app.get("/events/tonight", async (req, res) => {
         FROM events e
         LEFT JOIN venues v ON e.venue_id = v.venue_id
         WHERE e.start_time > NOW() - interval '30 minutes'
-          AND e.start_time < NOW() + interval '18 hours'
+          AND e.start_time < (date_trunc('day', NOW() AT TIME ZONE 'America/New_York') + interval '1 day 4 hours') AT TIME ZONE 'America/New_York'
           AND e.availability_tier != 'cancelled'
           AND ($2::text IS NULL OR e.segment = $2)
         ORDER BY e.start_time ASC
