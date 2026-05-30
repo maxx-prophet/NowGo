@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import pool from "../db/index.js";
 import { startScheduler, runPipeline } from "./scheduler.js";
 import { getTravelTime, computeLeaveBy } from "./services/travel.js";
+import { rankEvents, RANKING_POOL } from "./services/ranking.js";
 dotenv.config({ path: ".env.nowgo" });
 
 const app = express();
@@ -43,14 +44,11 @@ app.get("/sources", async (req, res) => {
 //   radius_miles    — default 10
 //   limit           — default 50, max 200
 //   segment         — filter by segment (Music, Sports, etc.)
-
-// Query params:
-//   lat, lng        — user location (decimal degrees)
-//   radius_miles    — default 10
-//   limit           — default 50, max 200
-//   segment         — filter by segment (Music, Sports, etc.)
 //   mode            — transit (default), walking, driving, cycling
 //   buffer_minutes  — minutes of buffer before event start, default 10
+//   sort            — best_match (default) | soonest | nearest | cheapest
+//   budget          — max price user wants to pay (used in best_match scoring)
+//   surprise_me     — true: return top 5 available events starting in 30–90 min
 
 app.get("/events/tonight", async (req, res) => {
   const lat = parseFloat(req.query.lat);
@@ -60,6 +58,9 @@ app.get("/events/tonight", async (req, res) => {
   const segment = req.query.segment ?? null;
   const mode = req.query.mode ?? "transit";
   const bufferMinutes = parseInt(req.query.buffer_minutes) || 10;
+  const sort = req.query.sort ?? "best_match";
+  const budget = req.query.budget != null ? parseFloat(req.query.budget) : null;
+  const surpriseMe = req.query.surprise_me === "true";
   const hasGeo = !isNaN(lat) && !isNaN(lng);
 
   try {
@@ -86,7 +87,7 @@ app.get("/events/tonight", async (req, res) => {
           AND (v.geo IS NULL OR ST_DWithin(v.geo, ST_MakePoint($2, $1)::geography, $3 * 1609.34))
         ORDER BY distance_m ASC NULLS LAST, e.start_time ASC
         LIMIT $4`;
-      params = [lat, lng, radiusMiles, limit, segment];
+      params = [lat, lng, radiusMiles, RANKING_POOL, segment];
     } else {
       query = `
         SELECT
@@ -104,7 +105,7 @@ app.get("/events/tonight", async (req, res) => {
           AND ($2::text IS NULL OR e.segment = $2)
         ORDER BY e.start_time ASC
         LIMIT $1`;
-      params = [limit, segment];
+      params = [RANKING_POOL, segment];
     }
 
     const { rows } = await pool.query(query, params);
@@ -128,7 +129,8 @@ app.get("/events/tonight", async (req, res) => {
         )
       : rows;
 
-    res.json({ count: events.length, geo: hasGeo, mode: hasGeo ? mode : undefined, events });
+    const ranked = rankEvents(events, { sort, surpriseMe, budget }).slice(0, surpriseMe ? 5 : limit);
+    res.json({ count: ranked.length, geo: hasGeo, mode: hasGeo ? mode : undefined, sort: surpriseMe ? "surprise_me" : sort, events: ranked });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
