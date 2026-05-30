@@ -46,7 +46,7 @@ app.get("/sources", async (req, res) => {
 //   segment         — filter by segment (Music, Sports, etc.)
 //   mode            — transit (default), walking, driving, cycling
 //   buffer_minutes  — minutes of buffer before event start, default 10
-//   sort            — best_match (default) | soonest | nearest | cheapest
+//   sort            — best_match (default) | soonest | nearest | cheapest | surprise
 //   budget          — max price user wants to pay (used in best_match scoring)
 //   surprise_me     — true: return top 5 available events starting in 30–90 min
 
@@ -71,7 +71,7 @@ app.get("/events/tonight", async (req, res) => {
         SELECT
           e.event_id, e.source, e.name, e.start_time, e.url,
           e.segment, e.genre, e.price_min, e.price_max, e.is_free,
-          e.availability_tier, e.last_checked_at,
+          e.availability_tier, e.last_checked_at, e.surprise_score,
           v.name        AS venue_name,
           v.address     AS venue_address,
           v.neighborhood,
@@ -93,7 +93,7 @@ app.get("/events/tonight", async (req, res) => {
         SELECT
           e.event_id, e.source, e.name, e.start_time, e.url,
           e.segment, e.genre, e.price_min, e.price_max, e.is_free,
-          e.availability_tier, e.last_checked_at,
+          e.availability_tier, e.last_checked_at, e.surprise_score,
           v.name        AS venue_name,
           v.address     AS venue_address,
           v.neighborhood

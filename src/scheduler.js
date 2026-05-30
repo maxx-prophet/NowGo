@@ -5,6 +5,7 @@ import { fetchJazzNYC } from "./fetchers/jazz-nyc.js";
 import { ingestEvents } from "../db/ingest.js";
 import { runAvailabilityCheck } from "./services/availability.js";
 import { runGenreEnrichment } from "./services/genre-enrichment.js";
+import { runSurpriseScore } from "./services/surprise-score.js";
 import pool from "../db/index.js";
 
 // ─── ALIAS MAP ───────────────────────────────────────────────────────────────
@@ -48,6 +49,7 @@ export async function runPipeline() {
 
     await runAvailabilityCheck();
     await runGenreEnrichment();
+    await runSurpriseScore();
     console.log(`  🏁 Pipeline complete [${new Date().toISOString()}]\n`);
   } catch (err) {
     console.error(`  ❌ Pipeline failed: ${err.message}\n`);

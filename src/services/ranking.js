@@ -58,6 +58,13 @@ export function rankEvents(events, { sort = "best_match", surpriseMe = false, bu
         return new Date(a.start_time) - new Date(b.start_time);
       });
 
+    case "surprise":
+      return sorted.sort((a, b) => {
+        const diff = (b.surprise_score ?? 0) - (a.surprise_score ?? 0);
+        if (diff !== 0) return diff;
+        return (a.distance_m ?? Infinity) - (b.distance_m ?? Infinity);
+      });
+
     default: // best_match
       return sorted.sort((a, b) => scoreEvent(b, nowMs, budget) - scoreEvent(a, nowMs, budget));
   }
