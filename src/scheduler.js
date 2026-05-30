@@ -4,6 +4,7 @@ import { fetchSeatGeek } from "./fetchers/seatgeek.js";
 import { fetchJazzNYC } from "./fetchers/jazz-nyc.js";
 import { ingestEvents } from "../db/ingest.js";
 import { runAvailabilityCheck } from "./services/availability.js";
+import { runGenreEnrichment } from "./services/genre-enrichment.js";
 import pool from "../db/index.js";
 
 // ─── ALIAS MAP ───────────────────────────────────────────────────────────────
@@ -46,6 +47,7 @@ export async function runPipeline() {
     console.log(`  💾 Ingested ${ok} events, skipped ${skipped}`);
 
     await runAvailabilityCheck();
+    await runGenreEnrichment();
     console.log(`  🏁 Pipeline complete [${new Date().toISOString()}]\n`);
   } catch (err) {
     console.error(`  ❌ Pipeline failed: ${err.message}\n`);

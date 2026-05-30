@@ -10,6 +10,7 @@
     "availability": "node -e \"import('./src/services/availability.js').then(m => m.runAvailabilityCheck()).then(() => process.exit(0))\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.100.1",
     "@upstash/redis": "^1.38.0",
     "dotenv": "^16.0.0",
     "exp": "^55.0.5",
