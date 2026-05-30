@@ -111,7 +111,12 @@ function stringsOverlap(a, b) {
   return na.slice(0, len) === nb.slice(0, len);
 }
 
-export function mergeEvents(tmEvents, sgEvents) {
+export function mergeEvents(tmEvents, sgEvents, aliasMap = new Map()) {
+  function resolveVenue(name) {
+    const n = norm(name);
+    return aliasMap.get(n) ?? n;
+  }
+
   const merged = [...tmEvents];
   const usedSgIds = new Set();
   let pricesFilled = 0;
@@ -122,7 +127,7 @@ export function mergeEvents(tmEvents, sgEvents) {
     const match = sgEvents.find((sg) => {
       if (usedSgIds.has(sg.id)) return false;
       if (sg.date !== tmEvent.date) return false;
-      return stringsOverlap(sg.venue, tmEvent.venue) || stringsOverlap(sg.name, tmEvent.name);
+      return stringsOverlap(resolveVenue(sg.venue), resolveVenue(tmEvent.venue)) || stringsOverlap(sg.name, tmEvent.name);
     });
 
     if (match) {
@@ -146,7 +151,7 @@ export function mergeEvents(tmEvents, sgEvents) {
 
 // ─── FETCH ───────────────────────────────────────────────────────────────────
 
-export async function fetchSeatGeek(tmEvents = []) {
+export async function fetchSeatGeek(tmEvents = [], aliasMap = new Map()) {
   const clientId = process.env.SEATGEEK_CLIENT_ID;
   const clientSecret = process.env.SEATGEEK_CLIENT_SECRET;
 
@@ -181,7 +186,7 @@ export async function fetchSeatGeek(tmEvents = []) {
   console.log(`   🧹 ${filtered.length} after filtering cancelled`);
 
   const sgEvents = filtered.map(normalizeSeatGeekEvent);
-  return mergeEvents(tmEvents, sgEvents);
+  return mergeEvents(tmEvents, sgEvents, aliasMap);
 }
 
 // ─── MAIN (CLI only) ──────────────────────────────────────────────────────────

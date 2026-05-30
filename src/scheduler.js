@@ -4,6 +4,21 @@ import { fetchSeatGeek } from "./fetchers/seatgeek.js";
 import { fetchJazzNYC } from "./fetchers/jazz-nyc.js";
 import { ingestEvents } from "../db/ingest.js";
 import { runAvailabilityCheck } from "./services/availability.js";
+import pool from "../db/index.js";
+
+// ─── ALIAS MAP ───────────────────────────────────────────────────────────────
+
+async function loadAliasMap() {
+  try {
+    const { rows } = await pool.query(
+      `SELECT va.alias, regexp_replace(lower(v.name), '[^a-z0-9]', '', 'g') AS canonical
+       FROM venue_aliases va JOIN venues v ON va.venue_id = v.venue_id`
+    );
+    return new Map(rows.map(r => [r.alias, r.canonical]));
+  } catch {
+    return new Map(); // venue_aliases table may not exist before migration runs
+  }
+}
 
 // ─── PIPELINE ────────────────────────────────────────────────────────────────
 
@@ -15,7 +30,10 @@ export async function runPipeline() {
     const tmEvents = await fetchTicketmaster();
     console.log(`  ✅ Ticketmaster: ${tmEvents.length} events`);
 
-    const mergedEvents = await fetchSeatGeek(tmEvents);
+    const aliasMap = await loadAliasMap();
+    console.log(`  🗺  Loaded ${aliasMap.size} venue aliases`);
+
+    const mergedEvents = await fetchSeatGeek(tmEvents, aliasMap);
     console.log(`  ✅ SeatGeek merged: ${mergedEvents.length} total events`);
 
     const jazzEvents = await fetchJazzNYC();

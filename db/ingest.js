@@ -29,22 +29,39 @@ function clean(val) {
 
 // ─── UPSERT HELPERS ───────────────────────────────────────────────────────────
 
+async function resolveVenueAlias(client, name) {
+  if (!name) return name;
+  const alias = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  try {
+    const { rows } = await client.query(
+      `SELECT v.name FROM venue_aliases va
+       JOIN venues v ON va.venue_id = v.venue_id
+       WHERE va.alias = $1`,
+      [alias]
+    );
+    return rows[0]?.name ?? name;
+  } catch {
+    return name; // venue_aliases table may not exist before migration runs
+  }
+}
+
 async function upsertVenue(client, event) {
   if (!event.venue) return null;
 
+  const venueName = await resolveVenueAlias(client, event.venue);
   const hasGeo = event.lat != null && event.lng != null;
 
   const { rows } = await client.query(
     `INSERT INTO venues (name, address, neighborhood, geo)
      VALUES ($1, $2, $3, $4)
-     ON CONFLICT (name) DO UPDATE
+     ON CONFLICT DO UPDATE
        SET address      = COALESCE(EXCLUDED.address, venues.address),
            neighborhood = COALESCE(EXCLUDED.neighborhood, venues.neighborhood),
            geo          = COALESCE(EXCLUDED.geo, venues.geo),
            updated_at   = now()
      RETURNING venue_id`,
     [
-      event.venue,
+      venueName,
       event.address ?? null,
       event.neighborhood ?? null,
       hasGeo ? `SRID=4326;POINT(${event.lng} ${event.lat})` : null,
