@@ -11,8 +11,6 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name='impact-site-verification' value='1d48550e-cbbe-4fe0-8a79-0e2759304933'>
 
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-  
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
@@ -447,7 +445,6 @@
         <div class="form-label">Get early access</div>
         <div class="form-row">
           <input class="form-input" type="email" id="emailInput" placeholder="your@email.com" />
-          <div class="cf-turnstile" data-sitekey="0x4AAAAAADQBXTDo4epJf9p-"></div>
           <button class="form-btn" onclick="handleSubmit()">Notify me →</button>
         </div>
         <p class="form-note">NYC launch first. No spam. Unsubscribe anytime.</p>
@@ -546,41 +543,41 @@
   </div>
 
   <script>
-   function handleSubmit() {
-  const LOOPS_FORM_ID = 'cmp31armp01hx0iy8v5vfkqds'; // ← same form ID as before
+  const LOOPS_FORM_ID = 'cmp31armp01hx0iy8v5vfkqds';
 
-  const input = document.getElementById('emailInput');
-  const success = document.getElementById('formSuccess');
-  const val = input.value.trim();
+  function handleSubmit() {
+    const input = document.getElementById('emailInput');
+    const success = document.getElementById('formSuccess');
+    const val = input.value.trim();
 
-  if (!val || !val.includes('@')) {
-    input.style.borderColor = 'rgba(239,68,68,0.5)';
-    setTimeout(() => input.style.borderColor = '', 1200);
-    return;
-  }
-  const turnstile = document.querySelector('[name="cf-turnstile-response"]');
-if (!turnstile || !turnstile.value) return;
-
-  fetch('https://app.loops.so/api/newsletter-form/' + 'cmp31armp01hx0iy8v5vfkqds', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'email=' + encodeURIComponent(val)
-  })
-  .then(res => res.json())
-  .then(data => {
-    if (data.success) {
-      input.style.display = 'none';
-      document.querySelector('.form-btn').style.display = 'none';
-      success.style.display = 'block';
+    if (!val || !val.includes('@')) {
+      input.style.borderColor = 'rgba(239,68,68,0.5)';
+      setTimeout(() => input.style.borderColor = '', 1200);
+      return;
     }
-  })
-  .catch(() => {
-    input.style.borderColor = 'rgba(239,68,68,0.5)';
-    setTimeout(() => input.style.borderColor = '', 1200);
-  });
-}    document.getElementById('emailInput').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') handleSubmit();
+
+    fetch('https://app.loops.so/api/newsletter-form/' + LOOPS_FORM_ID, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'email=' + encodeURIComponent(val)
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        input.style.display = 'none';
+        document.querySelector('.form-btn').style.display = 'none';
+        success.style.display = 'block';
+      }
+    })
+    .catch(() => {
+      input.style.borderColor = 'rgba(239,68,68,0.5)';
+      setTimeout(() => input.style.borderColor = '', 1200);
     });
+  }
+
+  document.getElementById('emailInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') handleSubmit();
+  });
   </script>
 
 </body>
