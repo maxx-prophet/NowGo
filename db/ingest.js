@@ -54,7 +54,7 @@ async function upsertVenue(client, event) {
   const { rows } = await client.query(
     `INSERT INTO venues (name, address, neighborhood, geo_lat, geo_lng)
      VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT (name) DO UPDATE
+     ON CONFLICT (lower(name)) DO UPDATE
        SET address      = COALESCE(EXCLUDED.address, venues.address),
            neighborhood = COALESCE(EXCLUDED.neighborhood, venues.neighborhood),
            geo_lat      = COALESCE(EXCLUDED.geo_lat, venues.geo_lat),
