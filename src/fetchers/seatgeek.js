@@ -72,7 +72,7 @@ function normalizeSeatGeekEvent(e) {
     priceMin: e.stats?.lowest_price ?? null,
     priceMax: e.stats?.highest_price ?? null,
     currency: "USD",
-    isFree: e.stats?.lowest_price === 0,
+    isFree: e.stats?.lowest_price === 0 && (e.stats?.listing_count ?? 0) > 0,
 
     status: e.status ?? null,
     availabilityTier: mapSGAvailability(e),
@@ -88,9 +88,9 @@ function mapSGAvailability(e) {
   if (e.status === "postponed") return "unknown";
   const lowest = e.stats?.lowest_price;
   if (lowest == null) return "unknown";
-  if (lowest === 0) return "available";
   const listings = e.stats?.listing_count ?? 0;
-  if (listings === 0) return "sold_out";
+  if (listings === 0) return "unknown";
+  if (lowest === 0) return "available";
   if (listings < 10) return "scarce";
   return "available";
 }

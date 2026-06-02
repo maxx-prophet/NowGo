@@ -49,6 +49,7 @@ app.get("/sources", async (req, res) => {
 //   sort            — best_match (default) | soonest | nearest | cheapest | surprise
 //   budget          — max price user wants to pay (used in best_match scoring)
 //   surprise_me     — true: return top 5 available events starting in 30–90 min
+//   include_sold_out — true: include sold-out events (default false)
 
 app.get("/events/tonight", async (req, res) => {
   const lat = parseFloat(req.query.lat);
@@ -61,6 +62,7 @@ app.get("/events/tonight", async (req, res) => {
   const sort = req.query.sort ?? "best_match";
   const budget = req.query.budget != null ? parseFloat(req.query.budget) : null;
   const surpriseMe = req.query.surprise_me === "true";
+  const includeSoldOut = req.query.include_sold_out === "true"; 
   const hasGeo = !isNaN(lat) && !isNaN(lng);
 
   try {
@@ -83,6 +85,7 @@ app.get("/events/tonight", async (req, res) => {
         WHERE e.start_time > NOW() - interval '30 minutes'
           AND e.start_time < (date_trunc('day', NOW() AT TIME ZONE 'America/New_York') + interval '1 day 4 hours') AT TIME ZONE 'America/New_York'
           AND e.availability_tier != 'cancelled'
+           ${includeSoldOut ? "" : "AND e.availability_tier != 'sold_out'"} 
           AND ($5::text IS NULL OR e.segment = $5)
           AND (v.geo_lat IS NULL OR (
             abs(v.geo_lat - $1) < ($3 / 111.0)
@@ -105,6 +108,7 @@ app.get("/events/tonight", async (req, res) => {
         WHERE e.start_time > NOW() - interval '30 minutes'
           AND e.start_time < (date_trunc('day', NOW() AT TIME ZONE 'America/New_York') + interval '1 day 4 hours') AT TIME ZONE 'America/New_York'
           AND e.availability_tier != 'cancelled'
+           ${includeSoldOut ? "" : "AND e.availability_tier != 'sold_out'"} 
           AND ($2::text IS NULL OR e.segment = $2)
         ORDER BY e.start_time ASC
         LIMIT $1`;
