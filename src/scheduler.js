@@ -6,6 +6,7 @@ import { ingestEvents } from "../db/ingest.js";
 import { runAvailabilityCheck } from "./services/availability.js";
 import { runGenreEnrichment } from "./services/genre-enrichment.js";
 import { runSurpriseScore } from "./services/surprise-score.js";
+import { runVenueEmbeddings } from "./services/venue-embeddings.js";
 import pool from "../db/index.js";
 
 // ─── ALIAS MAP ───────────────────────────────────────────────────────────────
@@ -35,7 +36,7 @@ export async function runPipeline() {
     const aliasMap = await loadAliasMap();
     console.log(`  🗺  Loaded ${aliasMap.size} venue aliases`);
 
-    const mergedEvents = await fetchSeatGeek(tmEvents, aliasMap);
+    const mergedEvents = await fetchSeatGeek(tmEvents, aliasMap, pool);
     console.log(`  ✅ SeatGeek merged: ${mergedEvents.length} total events`);
 
     const jazzEvents = await fetchJazzNYC();
@@ -50,6 +51,8 @@ export async function runPipeline() {
     await runAvailabilityCheck();
     await runGenreEnrichment();
     await runSurpriseScore();
+    await runVenueEmbeddings();
+    console.log(`  🔢 Venue embeddings complete`);
     console.log(`  🏁 Pipeline complete [${new Date().toISOString()}]\n`);
   } catch (err) {
     console.error(`  ❌ Pipeline failed: ${err.message}\n`);
