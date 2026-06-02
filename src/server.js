@@ -75,16 +75,19 @@ app.get("/events/tonight", async (req, res) => {
           v.name        AS venue_name,
           v.address     AS venue_address,
           v.neighborhood,
-          ST_Y(v.geo::geometry) AS venue_lat,
-          ST_X(v.geo::geometry) AS venue_lng,
-          round(ST_Distance(v.geo, ST_MakePoint($2, $1)::geography)::numeric) AS distance_m
+          v.geo_lat AS venue_lat,
+          v.geo_lng AS venue_lng,
+          0 AS distance_m
         FROM events e
         LEFT JOIN venues v ON e.venue_id = v.venue_id
         WHERE e.start_time > NOW() - interval '30 minutes'
           AND e.start_time < (date_trunc('day', NOW() AT TIME ZONE 'America/New_York') + interval '1 day 4 hours') AT TIME ZONE 'America/New_York'
           AND e.availability_tier != 'cancelled'
           AND ($5::text IS NULL OR e.segment = $5)
-          AND (v.geo IS NULL OR ST_DWithin(v.geo, ST_MakePoint($2, $1)::geography, $3 * 1609.34))
+          AND (v.geo_lat IS NULL OR (
+            abs(v.geo_lat - $1) < ($3 / 111.0)
+            AND abs(v.geo_lng - $2) < ($3 / (111.0 * cos(radians(v.geo_lat))))
+          ))
         ORDER BY distance_m ASC NULLS LAST, e.start_time ASC
         LIMIT $4`;
       params = [lat, lng, radiusMiles, RANKING_POOL, segment];
@@ -146,7 +149,7 @@ app.get("/events/:id", async (req, res) => {
          v.name        AS venue_name,
          v.address     AS venue_address,
          v.neighborhood,
-         ST_AsGeoJSON(v.geo)::json AS venue_geo
+         CASE WHEN v.geo_lat IS NOT NULL THEN json_build_object('lat', v.geo_lat, 'lng', v.geo_lng) ELSE NULL END AS venue_geo
        FROM events e
        LEFT JOIN venues v ON e.venue_id = v.venue_id
        WHERE e.event_id = $1`,

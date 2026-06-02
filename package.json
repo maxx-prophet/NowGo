@@ -7,7 +7,8 @@
     "fetch:tm": "node src/fetchers/ticketmaster.js",
     "fetch:sg": "node src/fetchers/seatgeek.js",
     "fetch:jazz": "node src/fetchers/jazz-nyc.js",
-    "availability": "node -e \"import('./src/services/availability.js').then(m => m.runAvailabilityCheck()).then(() => process.exit(0))\""
+    "availability": "node -e \"import('./src/services/availability.js').then(m => m.runAvailabilityCheck()).then(() => process.exit(0))\"",
+    "test": "node --test src/fetchers/seatgeek.test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",
@@ -18,6 +19,7 @@
     "node-cron": "^4.2.1",
     "node-fetch": "^3.0.0",
     "node-html-parser": "^7.1.0",
+    "openai": "^6.41.0",
     "pg": "^8.20.0"
   }
 }

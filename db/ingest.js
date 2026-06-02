@@ -52,19 +52,21 @@ async function upsertVenue(client, event) {
   const hasGeo = event.lat != null && event.lng != null;
 
   const { rows } = await client.query(
-    `INSERT INTO venues (name, address, neighborhood, geo)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT DO UPDATE
+    `INSERT INTO venues (name, address, neighborhood, geo_lat, geo_lng)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (lower(name)) DO UPDATE
        SET address      = COALESCE(EXCLUDED.address, venues.address),
            neighborhood = COALESCE(EXCLUDED.neighborhood, venues.neighborhood),
-           geo          = COALESCE(EXCLUDED.geo, venues.geo),
+           geo_lat      = COALESCE(EXCLUDED.geo_lat, venues.geo_lat),
+           geo_lng      = COALESCE(EXCLUDED.geo_lng, venues.geo_lng),
            updated_at   = now()
      RETURNING venue_id`,
     [
       venueName,
       event.address ?? null,
       event.neighborhood ?? null,
-      hasGeo ? `SRID=4326;POINT(${event.lng} ${event.lat})` : null,
+      hasGeo ? event.lat : null,
+      hasGeo ? event.lng : null,
     ]
   );
   return rows[0].venue_id;

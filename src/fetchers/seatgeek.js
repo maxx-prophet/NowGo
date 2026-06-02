@@ -2,6 +2,7 @@ import fetch from "node-fetch";
 import fs from "fs";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
+import { findVenueByEmbedding } from "../services/venue-embeddings.js";
 dotenv.config({ path: ".env.nowgo" });
 
 const NYC_LAT = 40.758;
@@ -111,10 +112,25 @@ function stringsOverlap(a, b) {
   return na.slice(0, len) === nb.slice(0, len);
 }
 
-export function mergeEvents(tmEvents, sgEvents, aliasMap = new Map()) {
-  function resolveVenue(name) {
+export async function mergeEvents(tmEvents, sgEvents, aliasMap = new Map(), dbPool = null) {
+  function resolveVenueName(name, pgCache) {
     const n = norm(name);
-    return aliasMap.get(n) ?? n;
+    return pgCache.get(n) ?? aliasMap.get(n) ?? n;
+  }
+
+  // Pre-resolve all unique SG venue names via pgvector (one OpenAI call per unique venue)
+  const pgVenueCache = new Map();
+  if (dbPool) {
+    const uniqueVenues = [...new Set(sgEvents.map(sg => sg.venue).filter(Boolean))];
+    for (const venueName of uniqueVenues) {
+      const n = norm(venueName);
+      if (aliasMap.has(n)) continue; // alias already covers it
+      const canonical = await findVenueByEmbedding(dbPool, venueName);
+      if (canonical) pgVenueCache.set(n, norm(canonical));
+    }
+    if (pgVenueCache.size > 0) {
+      console.log(`   🧠 pgvector resolved ${pgVenueCache.size} venue(s) semantically`);
+    }
   }
 
   const merged = [...tmEvents];
@@ -127,14 +143,16 @@ export function mergeEvents(tmEvents, sgEvents, aliasMap = new Map()) {
     const match = sgEvents.find((sg) => {
       if (usedSgIds.has(sg.id)) return false;
       if (sg.date !== tmEvent.date) return false;
-      return stringsOverlap(resolveVenue(sg.venue), resolveVenue(tmEvent.venue)) || stringsOverlap(sg.name, tmEvent.name);
+      const sgVenue = resolveVenueName(sg.venue, pgVenueCache);
+      const tmVenue = resolveVenueName(tmEvent.venue, pgVenueCache);
+      return stringsOverlap(sgVenue, tmVenue) || stringsOverlap(sg.name, tmEvent.name);
     });
 
     if (match) {
       if (match.priceMin !== null) {
         tmEvent.priceMin = match.priceMin;
         tmEvent.priceMax = match.priceMax;
-        tmEvent.isFree = match.priceMin === 0;
+        tmEvent.isFree = match.isFree;
         tmEvent._pricedBy = "seatgeek";
         pricesFilled++;
       }
@@ -151,7 +169,7 @@ export function mergeEvents(tmEvents, sgEvents, aliasMap = new Map()) {
 
 // ─── FETCH ───────────────────────────────────────────────────────────────────
 
-export async function fetchSeatGeek(tmEvents = [], aliasMap = new Map()) {
+export async function fetchSeatGeek(tmEvents = [], aliasMap = new Map(), dbPool = null) {
   const clientId = process.env.SEATGEEK_CLIENT_ID;
   const clientSecret = process.env.SEATGEEK_CLIENT_SECRET;
 
@@ -186,7 +204,7 @@ export async function fetchSeatGeek(tmEvents = [], aliasMap = new Map()) {
   console.log(`   🧹 ${filtered.length} after filtering cancelled`);
 
   const sgEvents = filtered.map(normalizeSeatGeekEvent);
-  return mergeEvents(tmEvents, sgEvents, aliasMap);
+  return mergeEvents(tmEvents, sgEvents, aliasMap, dbPool);
 }
 
 // ─── MAIN (CLI only) ──────────────────────────────────────────────────────────

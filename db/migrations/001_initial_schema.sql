@@ -1,7 +1,8 @@
 -- NowGo: Initial schema
--- Requires PostgreSQL with PostGIS extension (Railway: enable via dashboard or CREATE EXTENSION)
+-- Requires PostgreSQL with pgcrypto extension
 
-CREATE EXTENSION IF NOT EXISTS postgis;
+-- PostGIS is optional (not available on all Railway instances)
+-- Comment out if not available: CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";  -- for gen_random_uuid()
 
 -- ─── SOURCES ──────────────────────────────────────────────────────────────────
@@ -23,7 +24,9 @@ INSERT INTO sources (source_id, display_name, api_base_url) VALUES
 ON CONFLICT (source_id) DO NOTHING;
 
 -- ─── VENUES ───────────────────────────────────────────────────────────────────
--- Normalized venue records. Geo column powers "events near me" via PostGIS.
+-- Normalized venue records. Geo column stores coordinates for "events near me" queries.
+-- Note: PostGIS GEOGRAPHY type requires PostGIS extension (not available on all Railway instances).
+-- Using NUMERIC columns for lat/lng instead for compatibility.
 
 CREATE TABLE IF NOT EXISTS venues (
   venue_id     UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -31,13 +34,14 @@ CREATE TABLE IF NOT EXISTS venues (
   address      TEXT,
   neighborhood TEXT,
   city         TEXT        NOT NULL DEFAULT 'New York',
-  geo          GEOGRAPHY(POINT, 4326),   -- (lng, lat) — WGS 84
+  geo_lng      NUMERIC(9, 6),            -- longitude for geocoding
+  geo_lat      NUMERIC(8, 6),            -- latitude for geocoding
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- GIST index for ST_DWithin / ST_Distance queries
-CREATE INDEX IF NOT EXISTS venues_geo_idx ON venues USING GIST (geo);
+-- Index for coordinate-based queries (application-side distance calculation)
+CREATE INDEX IF NOT EXISTS venues_geo_idx ON venues (geo_lat, geo_lng);
 CREATE UNIQUE INDEX IF NOT EXISTS venues_name_idx ON venues (lower(name));
 
 -- ─── EVENTS ───────────────────────────────────────────────────────────────────
@@ -92,15 +96,17 @@ CREATE INDEX IF NOT EXISTS snapshots_event_id_idx  ON availability_snapshots (ev
 CREATE INDEX IF NOT EXISTS snapshots_checked_at_idx ON availability_snapshots (checked_at DESC);
 
 -- ─── HELPER: "EVENTS NEAR ME" QUERY ──────────────────────────────────────────
--- Example (run via pg client with $1=lng, $2=lat, $3=radius_meters):
+-- Application-side distance calculation using Haversine formula.
+-- Venues with geo_lng/geo_lat populated can be filtered by bounding box and sorted by distance.
+-- Example: Events near Times Square (40.758°N, -73.986°W) within 5km radius.
 --
 --   SELECT
 --     e.event_id, e.name, e.start_time, e.price_min, e.availability_tier,
---     v.name AS venue_name, v.address,
---     round(ST_Distance(v.geo, ST_MakePoint($1, $2)::geography)::numeric) AS distance_m
+--     v.name AS venue_name, v.address
 --   FROM events e
 --   JOIN venues v ON e.venue_id = v.venue_id
 --   WHERE e.start_time BETWEEN now() AND now() + interval '12 hours'
 --     AND e.availability_tier NOT IN ('cancelled')
---     AND ST_DWithin(v.geo, ST_MakePoint($1, $2)::geography, $3)
---   ORDER BY distance_m, e.start_time;
+--     AND v.geo_lat BETWEEN 40.708 AND 40.808  -- bounding box ~10km around target
+--     AND v.geo_lng BETWEEN -74.036 AND -73.936
+--   -- Application: calculate actual distance via Haversine and filter in code
