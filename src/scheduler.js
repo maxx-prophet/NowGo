@@ -48,11 +48,11 @@ export async function runPipeline() {
     const { ok, skipped } = await ingestEvents(allEvents);
     console.log(`  💾 Ingested ${ok} events, skipped ${skipped}`);
 
+    await runVenueEmbeddings();
+    console.log(`  🔢 Venue embeddings complete`);
     await runAvailabilityCheck();
     await runGenreEnrichment();
     await runSurpriseScore();
-    await runVenueEmbeddings();
-    console.log(`  🔢 Venue embeddings complete`);
     console.log(`  🏁 Pipeline complete [${new Date().toISOString()}]\n`);
   } catch (err) {
     console.error(`  ❌ Pipeline failed: ${err.message}\n`);
