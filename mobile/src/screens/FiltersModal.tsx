@@ -1,4 +1,14 @@
+import { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RouteProp } from "@react-navigation/native";
+
+type ParamList = { Filters: { mode: string; onApply: (mode: string) => void } };
+
+interface Props {
+  route: RouteProp<ParamList, "Filters">;
+  navigation: NativeStackNavigationProp<any>;
+}
 
 const MODES = [
   { key: "transit",  label: "🚇 Transit",  desc: "Subway & bus" },
@@ -7,9 +17,9 @@ const MODES = [
   { key: "cycling",  label: "🚲 Cycling",  desc: "By bike" },
 ];
 
-export default function FiltersModal({ route, navigation }) {
+export default function FiltersModal({ route, navigation }: Props) {
   const { mode: initialMode, onApply } = route.params;
-  const [mode, setMode] = require("react").useState(initialMode);
+  const [mode, setMode] = useState(initialMode);
 
   const apply = () => {
     onApply(mode);

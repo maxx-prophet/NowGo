@@ -1,8 +1,10 @@
-// For iOS Simulator: localhost works fine.
-// For physical iPhone: replace with your machine's local IP (run `ipconfig getifaddr en0`).
+import type { FetchEventsParams, Event } from "../types";
+
 const API_BASE = "https://nowgo-production.up.railway.app";
 
-export async function fetchTonightEvents({ lat, lng, mode = "transit", segment, radiusMiles = 10 } = {}) {
+export async function fetchTonightEvents(
+  { lat, lng, mode = "transit", segment, radiusMiles = 10 }: FetchEventsParams = {}
+): Promise<{ events: Event[] }> {
   const params = new URLSearchParams({ limit: "50", radius_miles: String(radiusMiles) });
   if (lat != null && lng != null) {
     params.set("lat", String(lat));
@@ -16,7 +18,7 @@ export async function fetchTonightEvents({ lat, lng, mode = "transit", segment, 
   return res.json();
 }
 
-export async function fetchEvent(id) {
+export async function fetchEvent(id: string): Promise<Event> {
   const res = await fetch(`${API_BASE}/events/${id}`);
   if (!res.ok) throw new Error(`API error ${res.status}`);
   return res.json();

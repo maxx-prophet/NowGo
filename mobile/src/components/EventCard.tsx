@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import type { Event } from "../types";
 
-const SEGMENTS = {
+const SEGMENTS: Record<string, { color: string; emoji: string }> = {
   Music: { color: "#FF6B35", emoji: "🎵" },
   Theatre: { color: "#A855F7", emoji: "🎭" },
   Sports: { color: "#3B82F6", emoji: "🏆" },
@@ -9,7 +10,7 @@ const SEGMENTS = {
   Family: { color: "#10B981", emoji: "👨‍👩‍👧" },
 };
 
-function leaveByDisplay(leaveBy) {
+function leaveByDisplay(leaveBy: string | null | undefined) {
   if (!leaveBy) return null;
   const now = Date.now();
   const leaveMs = new Date(leaveBy).getTime();
@@ -21,7 +22,7 @@ function leaveByDisplay(leaveBy) {
   return { label: `Leave by ${formatTime(leaveBy)}`, color: "#22C55E" };
 }
 
-function formatTime(iso) {
+function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
@@ -30,15 +31,20 @@ function formatTime(iso) {
   });
 }
 
-function formatPrice(min, max, isFree) {
+function formatPrice(min: number | null | undefined, max: number | null | undefined, isFree: boolean) {
   if (isFree) return "FREE";
   if (!min && !max) return "—";
-  if (!max || min === max) return `$${Math.round(min)}`;
-  return `$${Math.round(min)}–$${Math.round(max)}`;
+  if (!max || min === max) return `$${Math.round(min!)}`;
+  return `$${Math.round(min!)}–$${Math.round(max)}`;
 }
 
-export default function EventCard({ event, onPress }) {
-  const seg = SEGMENTS[event.segment] ?? { color: "#6B7280", emoji: "📅" };
+interface EventCardProps {
+  event: Event;
+  onPress: () => void;
+}
+
+export default function EventCard({ event, onPress }: EventCardProps) {
+  const seg = SEGMENTS[event.segment ?? ""] ?? { color: "#6B7280", emoji: "📅" };
   const lb = leaveByDisplay(event.leave_by);
 
   return (

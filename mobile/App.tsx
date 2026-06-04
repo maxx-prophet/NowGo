@@ -1,3 +1,4 @@
+import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
@@ -26,12 +27,12 @@ export default function App() {
         />
         <Stack.Screen
           name="EventDetail"
-          component={EventDetail}
+          component={EventDetail as React.ComponentType<any>}
           options={{ title: "Event" }}
         />
         <Stack.Screen
           name="Filters"
-          component={FiltersModal}
+          component={FiltersModal as React.ComponentType<any>}
           options={{ presentation: "modal", title: "Filters" }}
         />
       </Stack.Navigator>

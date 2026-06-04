@@ -4,17 +4,23 @@ import {
   ActivityIndicator, StyleSheet, RefreshControl,
 } from "react-native";
 import * as Location from "expo-location";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import EventCard from "../components/EventCard";
 import { fetchTonightEvents } from "../api/nowgo";
+import type { Event } from "../types";
 
 const SEGMENTS = ["All", "Music", "Arts & Theatre", "Sports", "Comedy", "Family"];
 
-export default function TonightFeed({ navigation }) {
-  const [events, setEvents] = useState([]);
+interface Props {
+  navigation: NativeStackNavigationProp<any>;
+}
+
+export default function TonightFeed({ navigation }: Props) {
+  const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState(null);
-  const [location, setLocation] = useState(null);
+  const [error, setError] = useState<string | null>(null);
+  const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
   const [segment, setSegment] = useState("All");
   const [mode, setMode] = useState("transit");
 
@@ -40,7 +46,7 @@ export default function TonightFeed({ navigation }) {
       });
       setEvents(data.events ?? []);
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -52,7 +58,7 @@ export default function TonightFeed({ navigation }) {
   const openFilters = () =>
     navigation.navigate("Filters", {
       mode,
-      onApply: (newMode) => { setMode(newMode); },
+      onApply: (newMode: string) => { setMode(newMode); },
     });
 
   if (loading) {

@@ -1,6 +1,16 @@
 import { View, Text, ScrollView, TouchableOpacity, Linking, StyleSheet } from "react-native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RouteProp } from "@react-navigation/native";
+import type { Event } from "../types";
 
-function formatTime(iso) {
+type ParamList = { EventDetail: { event: Event } };
+
+interface Props {
+  route: RouteProp<ParamList, "EventDetail">;
+  navigation: NativeStackNavigationProp<any>;
+}
+
+function formatTime(iso: string) {
   return new Date(iso).toLocaleString("en-US", {
     weekday: "short",
     month: "short",
@@ -12,7 +22,7 @@ function formatTime(iso) {
   });
 }
 
-function leaveByDisplay(leaveBy) {
+function leaveByDisplay(leaveBy: string | null | undefined) {
   if (!leaveBy) return null;
   const now = Date.now();
   const leaveMs = new Date(leaveBy).getTime();
@@ -28,7 +38,7 @@ function leaveByDisplay(leaveBy) {
   return { label: `Leave by ${t}`, color: "#22C55E" };
 }
 
-function formatPrice(min, max, isFree) {
+function formatPrice(min: number | null | undefined, max: number | null | undefined, isFree: boolean) {
   if (isFree) return "Free";
   if (min == null && max == null) return "Price unavailable";
   if (min == null) return `$${Number(max).toFixed(2)}`;
@@ -36,7 +46,7 @@ function formatPrice(min, max, isFree) {
   return `$${Number(min).toFixed(2)} – $${Number(max).toFixed(2)}`;
 }
 
-export default function EventDetail({ route, navigation }) {
+export default function EventDetail({ route }: Props) {
   const { event } = route.params;
   const lb = leaveByDisplay(event.leave_by);
 
@@ -96,7 +106,7 @@ export default function EventDetail({ route, navigation }) {
       {event.url ? (
         <TouchableOpacity
           style={styles.ticketsBtn}
-          onPress={() => Linking.openURL(event.url)}
+          onPress={() => Linking.openURL(event.url!)}
         >
           <Text style={styles.ticketsBtnText}>Get Tickets →</Text>
         </TouchableOpacity>
