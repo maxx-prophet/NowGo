@@ -1,6 +1,8 @@
+import Constants from "expo-constants";
 import type { FetchEventsParams, Event } from "../types";
 
-const API_BASE = "https://nowgo-production.up.railway.app";
+const API_BASE: string =
+  Constants.expoConfig?.extra?.apiUrl ?? "https://nowgo-production.up.railway.app";
 
 export async function fetchTonightEvents(
   { lat, lng, mode = "transit", segment, radiusMiles = 10 }: FetchEventsParams = {}
