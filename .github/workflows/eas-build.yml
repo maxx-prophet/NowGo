@@ -25,7 +25,18 @@ jobs:
         working-directory: mobile
         run: npm ci
 
+      - name: Check Apple credentials exist
+        id: check_creds
+        run: |
+          if [ -z "${{ secrets.APPLE_PROVISIONING_PROFILE }}" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Apple credentials not yet configured — skipping build. Register Apple Developer account and run 'eas credentials' to unblock."
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build iOS (preview)
+        if: steps.check_creds.outputs.skip == 'false'
         working-directory: mobile
         run: npx eas-cli build --platform ios --profile preview --non-interactive
         env:
