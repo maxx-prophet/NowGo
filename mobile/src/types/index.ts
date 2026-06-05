@@ -27,3 +27,12 @@ export interface FetchEventsParams {
   segment?: string;
   radiusMiles?: number;
 }
+
+export type UserIdentity = "local" | "transplant" | "visitor";
+
+export interface UserPreferences {
+  identity: UserIdentity;
+  vibes: string[];
+  budgetMax: number | null; // null = no limit ($500+)
+  onboardingComplete: boolean;
+}
