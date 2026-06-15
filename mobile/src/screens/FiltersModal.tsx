@@ -36,7 +36,7 @@ export default function FiltersModal({ route, navigation }: Props) {
         <TouchableOpacity
           key={m.key}
           style={[styles.modeRow, mode === m.key && styles.modeRowActive]}
-          onPress={() => setMode(m.key as "transit" | "walk" | "drive")}
+          onPress={() => setMode(m.key)}
         >
           <View style={styles.modeInfo}>
             <Text style={styles.modeLabel}>{m.label}</Text>
