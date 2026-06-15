@@ -3,18 +3,17 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
 
-type ParamList = { Filters: { mode: string; onApply: (mode: string) => void } };
+type ParamList = { Filters: { mode: "transit" | "walk" | "drive"; onApply: (mode: "transit" | "walk" | "drive") => void } };
 
 interface Props {
   route: RouteProp<ParamList, "Filters">;
   navigation: NativeStackNavigationProp<any>;
 }
 
-const MODES = [
+const MODES: Array<{ key: "transit" | "walk" | "drive"; label: string; desc: string }> = [
   { key: "transit",  label: "🚇 Transit",  desc: "Subway & bus" },
-  { key: "walking",  label: "🚶 Walking",  desc: "On foot" },
-  { key: "driving",  label: "🚗 Driving",  desc: "By car" },
-  { key: "cycling",  label: "🚲 Cycling",  desc: "By bike" },
+  { key: "walk",  label: "🚶 Walking",  desc: "On foot" },
+  { key: "drive",  label: "🚗 Driving",  desc: "By car" },
 ];
 
 export default function FiltersModal({ route, navigation }: Props) {
@@ -37,7 +36,7 @@ export default function FiltersModal({ route, navigation }: Props) {
         <TouchableOpacity
           key={m.key}
           style={[styles.modeRow, mode === m.key && styles.modeRowActive]}
-          onPress={() => setMode(m.key)}
+          onPress={() => setMode(m.key as "transit" | "walk" | "drive")}
         >
           <View style={styles.modeInfo}>
             <Text style={styles.modeLabel}>{m.label}</Text>

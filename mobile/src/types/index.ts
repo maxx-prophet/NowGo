@@ -23,9 +23,12 @@ export interface Event {
 export interface FetchEventsParams {
   lat?: number | null;
   lng?: number | null;
-  mode?: string;
+  mode?: "transit" | "walk" | "drive";
   segment?: string;
   radiusMiles?: number;
+  budgetMax?: number | null;
+  sortBy?: "best" | "soonest" | "nearest" | "cheapest";
+  walkInsOnly?: boolean;
 }
 
 export type UserIdentity = "local" | "transplant" | "visitor";

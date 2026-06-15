@@ -22,7 +22,7 @@ export default function TonightFeed({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
   const [segment, setSegment] = useState("All");
-  const [mode, setMode] = useState("transit");
+  const [mode, setMode] = useState<"transit" | "walk" | "drive">("transit");
 
   useEffect(() => {
     (async () => {
@@ -58,7 +58,7 @@ export default function TonightFeed({ navigation }: Props) {
   const openFilters = () =>
     navigation.navigate("Filters", {
       mode,
-      onApply: (newMode: string) => { setMode(newMode); },
+      onApply: (newMode: "transit" | "walk" | "drive") => { setMode(newMode as "transit" | "walk" | "drive"); },
     });
 
   if (loading) {
@@ -104,14 +104,14 @@ export default function TonightFeed({ navigation }: Props) {
 
       {/* Mode + filter row */}
       <View style={styles.modeRow}>
-        {["transit", "walking", "driving"].map((m) => (
+        {["transit", "walk", "drive"].map((m) => (
           <TouchableOpacity
             key={m}
-            style={[styles.modeChip, mode === m && styles.modeChipActive]}
-            onPress={() => setMode(m)}
+            style={[styles.modeChip, mode === (m as "transit" | "walk" | "drive") && styles.modeChipActive]}
+            onPress={() => setMode(m as "transit" | "walk" | "drive")}
           >
-            <Text style={[styles.modeText, mode === m && styles.modeTextActive]}>
-              {m === "transit" ? "🚇 Transit" : m === "walking" ? "🚶 Walk" : "🚗 Drive"}
+            <Text style={[styles.modeText, mode === (m as "transit" | "walk" | "drive") && styles.modeTextActive]}>
+              {m === "transit" ? "🚇 Transit" : m === "walk" ? "🚶 Walk" : "🚗 Drive"}
             </Text>
           </TouchableOpacity>
         ))}
