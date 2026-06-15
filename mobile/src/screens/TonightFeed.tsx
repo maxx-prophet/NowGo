@@ -1,15 +1,41 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   View, Text, FlatList, TouchableOpacity,
-  ActivityIndicator, StyleSheet, RefreshControl,
+  ActivityIndicator, StyleSheet, RefreshControl, Modal, Switch,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import EventCard from "../components/EventCard";
 import { fetchTonightEvents } from "../api/nowgo";
 import type { Event } from "../types";
 
-const SEGMENTS = ["All", "Music", "Arts & Theatre", "Sports", "Comedy", "Family"];
+const CATEGORIES = [
+  "All", "Jazz", "Music", "Comedy", "Theater",
+  "Sports", "Art", "Outdoors", "Film", "Talks", "Nightlife", "Family",
+];
+
+const BUDGETS: { label: string; value: number | null }[] = [
+  { label: "Free", value: 0 },
+  { label: "<$25", value: 25 },
+  { label: "<$50", value: 50 },
+  { label: "<$100", value: 100 },
+  { label: "Any", value: null },
+];
+
+const MODES = [
+  { key: "transit" as const, emoji: "🚇", label: "Transit" },
+  { key: "walk" as const,    emoji: "🚶", label: "Walk" },
+  { key: "drive" as const,   emoji: "🚗", label: "Drive" },
+];
+const MODE_EMOJI: Record<string, string> = { transit: "🚇", walk: "🚶", drive: "🚗" };
+
+const SORT_OPTIONS = [
+  { key: "best" as const,     label: "Best Match" },
+  { key: "soonest" as const,  label: "Soonest" },
+  { key: "nearest" as const,  label: "Nearest" },
+  { key: "cheapest" as const, label: "Cheapest" },
+];
 
 interface Props {
   navigation: NativeStackNavigationProp<any>;
@@ -21,8 +47,15 @@ export default function TonightFeed({ navigation }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
-  const [segment, setSegment] = useState("All");
+
+  const [category, setCategory] = useState("All");
+  const [budgetMax, setBudgetMax] = useState<number | null>(null);
   const [mode, setMode] = useState<"transit" | "walk" | "drive">("transit");
+  const [sortBy, setSortBy] = useState<"best" | "soonest" | "nearest" | "cheapest">("best");
+  const [walkInsOnly, setWalkInsOnly] = useState(false);
+
+  const [modePickerOpen, setModePickerOpen] = useState(false);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -42,7 +75,10 @@ export default function TonightFeed({ navigation }: Props) {
         lat: location?.latitude,
         lng: location?.longitude,
         mode,
-        segment,
+        segment: category,
+        budgetMax,
+        sortBy,
+        walkInsOnly,
       });
       setEvents(data.events ?? []);
     } catch (err) {
@@ -51,15 +87,9 @@ export default function TonightFeed({ navigation }: Props) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [location, segment, mode]);
+  }, [location, category, mode, budgetMax, sortBy, walkInsOnly]);
 
   useEffect(() => { load(); }, [load]);
-
-  const openFilters = () =>
-    navigation.navigate("Filters", {
-      mode,
-      onApply: (newMode: "transit" | "walk" | "drive") => { setMode(newMode as "transit" | "walk" | "drive"); },
-    });
 
   if (loading) {
     return (
@@ -82,25 +112,34 @@ export default function TonightFeed({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      {/* Segment filter chips */}
-      <FlatList
-        data={SEGMENTS}
-        horizontal
-        keyExtractor={(s) => s}
-        showsHorizontalScrollIndicator={false}
-        style={styles.chipList}
-        contentContainerStyle={styles.chipRow}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.chip, segment === item && styles.chipActive]}
-            onPress={() => setSegment(item)}
-          >
-            <Text style={[styles.chipText, segment === item && styles.chipTextActive]}>
-              {item}
-            </Text>
-          </TouchableOpacity>
-        )}
-      />
+      {/* Row 1 — Category pills */}
+      <View style={styles.categoryRowWrap}>
+        <FlatList
+          data={CATEGORIES}
+          horizontal
+          keyExtractor={(s) => s}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipRow}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[styles.chip, category === item && styles.chipActive]}
+              onPress={() => setCategory(item)}
+            >
+              <Text style={[styles.chipText, category === item && styles.chipTextActive]}>
+                {item}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
+        <LinearGradient
+          colors={["transparent", "#0A0A0A"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.fadeRight}
+          pointerEvents="none"
+        />
+        <Text style={styles.scrollArrow} pointerEvents="none">›</Text>
+      </View>
 
       {/* Mode + filter row */}
       <View style={styles.modeRow}>
@@ -150,7 +189,22 @@ export default function TonightFeed({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0A0A0A" },
   center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0A0A0A" },
-  chipList: { flexGrow: 0 },
+  categoryRowWrap: { position: "relative" },
+  fadeRight: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 40,
+  },
+  scrollArrow: {
+    position: "absolute",
+    right: 6,
+    top: "50%",
+    color: "#6B7280",
+    fontSize: 18,
+    marginTop: -10,
+  },
   chipRow: { paddingHorizontal: 16, paddingVertical: 12, gap: 8, alignItems: 'center' },
   chip: {
     paddingHorizontal: 14,
@@ -162,7 +216,7 @@ const styles = StyleSheet.create({
   },
   chipActive: { backgroundColor: "#FF6B35", borderColor: "#FF6B35" },
   chipText: { color: "#9CA3AF", fontSize: 13, fontWeight: "500" },
-  chipTextActive: { color: "#FFFFFF" },
+  chipTextActive: { color: "#FFFFFF", fontWeight: "700" },
   modeRow: {
     flexDirection: "row",
     paddingHorizontal: 16,
