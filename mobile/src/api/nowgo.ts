@@ -4,18 +4,18 @@ import type { FetchEventsParams, Event } from "../types";
 const API_BASE: string =
   Constants.expoConfig?.extra?.apiUrl ?? "https://nowgo-production.up.railway.app";
 
-const MODE_API_MAP: Record<string, string> = {
+const MODE_API_MAP = {
   transit: "transit",
   walk: "walking",
   drive: "driving",
-};
+} as const;
 
-const SORT_API_MAP: Record<string, string> = {
+const SORT_API_MAP = {
   best: "best_match",
   soonest: "soonest",
   nearest: "nearest",
   cheapest: "cheapest",
-};
+} as const;
 
 export async function fetchTonightEvents(
   {
