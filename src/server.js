@@ -62,8 +62,10 @@ app.get("/events/tonight", async (req, res) => {
   const sort = req.query.sort ?? "best_match";
   const budget = req.query.budget != null ? parseFloat(req.query.budget) : null;
   const surpriseMe = req.query.surprise_me === "true";
-  const includeSoldOut = req.query.include_sold_out === "true"; 
+  const includeSoldOut = req.query.include_sold_out === "true";
   const hasGeo = !isNaN(lat) && !isNaN(lng);
+  const budgetMax = req.query.budget_max != null ? parseFloat(req.query.budget_max) : null;
+  const walkInsOnly = req.query.walk_ins_only === "true";
 
   try {
     let query, params;
@@ -74,6 +76,7 @@ app.get("/events/tonight", async (req, res) => {
           e.event_id, e.source, e.name, e.start_time, e.url,
           e.segment, e.genre, e.price_min, e.price_max, e.is_free,
           e.availability_tier, e.last_checked_at, e.surprise_score,
+          e.walk_in,
           v.name        AS venue_name,
           v.address     AS venue_address,
           v.neighborhood,
@@ -100,6 +103,7 @@ app.get("/events/tonight", async (req, res) => {
           e.event_id, e.source, e.name, e.start_time, e.url,
           e.segment, e.genre, e.price_min, e.price_max, e.is_free,
           e.availability_tier, e.last_checked_at, e.surprise_score,
+          e.walk_in,
           v.name        AS venue_name,
           v.address     AS venue_address,
           v.neighborhood
@@ -118,7 +122,7 @@ app.get("/events/tonight", async (req, res) => {
     const { rows } = await pool.query(query, params);
 
     // Enrich with travel time when user location is known
-    const events = hasGeo
+    let filterable = hasGeo
       ? await Promise.all(
           rows.map(async (event) => {
             if (event.venue_lat == null || event.venue_lng == null) {
@@ -136,7 +140,18 @@ app.get("/events/tonight", async (req, res) => {
         )
       : rows;
 
-    const ranked = rankEvents(events, { sort, surpriseMe, budget }).slice(0, surpriseMe ? 5 : limit);
+    if (budgetMax !== null) {
+      filterable = filterable.filter((e) =>
+        budgetMax === 0
+          ? e.is_free
+          : e.is_free || e.price_min == null || e.price_min <= budgetMax
+      );
+    }
+    if (walkInsOnly) {
+      filterable = filterable.filter((e) => e.walk_in === true);
+    }
+
+    const ranked = rankEvents(filterable, { sort, surpriseMe, budget }).slice(0, surpriseMe ? 5 : limit);
     res.json({ count: ranked.length, geo: hasGeo, mode: hasGeo ? mode : undefined, sort: surpriseMe ? "surprise_me" : sort, events: ranked });
   } catch (err) {
     res.status(500).json({ error: err.message });
