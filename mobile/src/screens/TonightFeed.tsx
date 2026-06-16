@@ -49,7 +49,7 @@ export default function TonightFeed({ navigation }: Props) {
   const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
 
   const [category, setCategory] = useState("All");
-  const [budgetMax, setBudgetMax] = useState<number | null>(null);
+  const [budgetMax, setBudgetMax] = useState<number | null | undefined>(undefined);
   const [mode, setMode] = useState<"transit" | "walk" | "drive">("transit");
   const [sortBy, setSortBy] = useState<"best" | "soonest" | "nearest" | "cheapest">("best");
   const [walkInsOnly, setWalkInsOnly] = useState(false);
@@ -251,6 +251,15 @@ export default function TonightFeed({ navigation }: Props) {
         )}
         contentContainerStyle={styles.listContent}
       />
+      {/* Mode picker backdrop — dismiss on outside tap */}
+      {modePickerOpen && (
+        <TouchableOpacity
+          style={styles.modePickerBackdrop}
+          activeOpacity={0}
+          onPress={() => setModePickerOpen(false)}
+        />
+      )}
+
       {/* Filter bottom sheet */}
       <Modal
         visible={filterSheetOpen}
@@ -356,7 +365,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   budgetScrollWrap: { flex: 1, position: "relative" },
-  budgetChipRow: { paddingHorizontal: 16, gap: 8, alignItems: "center" },
+  budgetChipRow: { paddingHorizontal: 16, paddingTop: 8, gap: 8, alignItems: "center" },
   budgetChip: {
     paddingHorizontal: 12,
     paddingVertical: 5,
@@ -419,6 +428,14 @@ const styles = StyleSheet.create({
   },
   filterIconWrap: { gap: 3, alignItems: "flex-start" },
   filterLine: { height: 1.5, backgroundColor: "#9CA3AF", borderRadius: 1 },
+  modePickerBackdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9,
+  },
   countLabel: {
     color: "#4B5563",
     fontSize: 12,
