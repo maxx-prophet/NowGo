@@ -236,6 +236,62 @@ export default function TonightFeed({ navigation }: Props) {
         )}
         contentContainerStyle={styles.listContent}
       />
+      {/* Filter bottom sheet */}
+      <Modal
+        visible={filterSheetOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setFilterSheetOpen(false)}
+      >
+        <View style={styles.sheetBackdrop}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFillObject}
+            onPress={() => setFilterSheetOpen(false)}
+            activeOpacity={1}
+          />
+          <View style={styles.sheet}>
+            {/* Sort By */}
+            <Text style={styles.sheetHeading}>Sort By</Text>
+            <View style={styles.sortGrid}>
+              {SORT_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[styles.sortOption, sortBy === opt.key && styles.sortOptionActive]}
+                  onPress={() => setSortBy(opt.key)}
+                >
+                  <Text style={[styles.sortOptionText, sortBy === opt.key && styles.sortOptionTextActive]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Availability */}
+            <Text style={styles.sheetHeading}>Availability</Text>
+            <View style={styles.toggleRow}>
+              <View>
+                <Text style={styles.toggleLabel}>Walk-ins only</Text>
+                <Text style={styles.toggleSub}>No ticket required</Text>
+              </View>
+              <Switch
+                value={walkInsOnly}
+                onValueChange={setWalkInsOnly}
+                trackColor={{ false: "#2A2A2A", true: "#FF6B35" }}
+                thumbColor="#FFFFFF"
+                ios_backgroundColor="#2A2A2A"
+              />
+            </View>
+
+            {/* CTA */}
+            <TouchableOpacity
+              style={styles.showResultsBtn}
+              onPress={() => setFilterSheetOpen(false)}
+            >
+              <Text style={styles.showResultsText}>Show results</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -356,4 +412,58 @@ const styles = StyleSheet.create({
   },
   retryText: { color: "#FF6B35", fontWeight: "600" },
   emptyText: { color: "#4B5563", fontSize: 15 },
+  sheetBackdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  sheet: {
+    backgroundColor: "#111111",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  sheetHeading: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  sortGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 20,
+  },
+  sortOption: {
+    width: "47%",
+    paddingVertical: 12,
+    alignItems: "center",
+    borderRadius: 10,
+    backgroundColor: "#1A1A1A",
+    borderWidth: 1.5,
+    borderColor: "#2A2A2A",
+  },
+  sortOptionActive: { backgroundColor: "#F5A623", borderColor: "#F5A623" },
+  sortOptionText: { color: "#9CA3AF", fontSize: 14, fontWeight: "500" },
+  sortOptionTextActive: { color: "#111111", fontWeight: "700" },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 28,
+  },
+  toggleLabel: { color: "#FFFFFF", fontSize: 15, fontWeight: "500" },
+  toggleSub: { color: "#6B7280", fontSize: 13, marginTop: 2 },
+  showResultsBtn: {
+    backgroundColor: "#FF6B35",
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  showResultsText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
 });
