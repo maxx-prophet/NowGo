@@ -223,7 +223,11 @@ export default function TonightFeed({ navigation }: Props) {
           </View>
         }
         ListHeaderComponent={
-          <Text style={styles.countLabel}>
+          <Text
+            style={styles.countLabel}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
             {events.length} events tonight
             {location ? " · near you" : " · NYC"}
           </Text>
