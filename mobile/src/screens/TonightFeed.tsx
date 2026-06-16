@@ -53,6 +53,8 @@ export default function TonightFeed({ navigation }: Props) {
   const [mode, setMode] = useState<"transit" | "walk" | "drive">("transit");
   const [sortBy, setSortBy] = useState<"best" | "soonest" | "nearest" | "cheapest">("best");
   const [walkInsOnly, setWalkInsOnly] = useState(false);
+  const [draftSortBy, setDraftSortBy] = useState<"best" | "soonest" | "nearest" | "cheapest">("best");
+  const [draftWalkInsOnly, setDraftWalkInsOnly] = useState(false);
 
   const [modePickerOpen, setModePickerOpen] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
@@ -88,6 +90,13 @@ export default function TonightFeed({ navigation }: Props) {
       setRefreshing(false);
     }
   }, [location, category, mode, budgetMax, sortBy, walkInsOnly]);
+
+  useEffect(() => {
+    if (filterSheetOpen) {
+      setDraftSortBy(sortBy);
+      setDraftWalkInsOnly(walkInsOnly);
+    }
+  }, [filterSheetOpen]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -138,7 +147,9 @@ export default function TonightFeed({ navigation }: Props) {
           style={styles.fadeRight}
           pointerEvents="none"
         />
-        <Text style={styles.scrollArrow} pointerEvents="none">›</Text>
+        <View pointerEvents="none" style={styles.scrollArrow}>
+          <Text style={styles.scrollArrowText}>›</Text>
+        </View>
       </View>
 
       {/* Row 2 — Budget chips + pinned buttons */}
@@ -260,10 +271,10 @@ export default function TonightFeed({ navigation }: Props) {
               {SORT_OPTIONS.map((opt) => (
                 <TouchableOpacity
                   key={opt.key}
-                  style={[styles.sortOption, sortBy === opt.key && styles.sortOptionActive]}
-                  onPress={() => setSortBy(opt.key)}
+                  style={[styles.sortOption, draftSortBy === opt.key && styles.sortOptionActive]}
+                  onPress={() => setDraftSortBy(opt.key)}
                 >
-                  <Text style={[styles.sortOptionText, sortBy === opt.key && styles.sortOptionTextActive]}>
+                  <Text style={[styles.sortOptionText, draftSortBy === opt.key && styles.sortOptionTextActive]}>
                     {opt.label}
                   </Text>
                 </TouchableOpacity>
@@ -278,8 +289,8 @@ export default function TonightFeed({ navigation }: Props) {
                 <Text style={styles.toggleSub}>No ticket required</Text>
               </View>
               <Switch
-                value={walkInsOnly}
-                onValueChange={setWalkInsOnly}
+                value={draftWalkInsOnly}
+                onValueChange={setDraftWalkInsOnly}
                 trackColor={{ false: "#2A2A2A", true: "#FF6B35" }}
                 thumbColor="#FFFFFF"
                 ios_backgroundColor="#2A2A2A"
@@ -289,7 +300,11 @@ export default function TonightFeed({ navigation }: Props) {
             {/* CTA */}
             <TouchableOpacity
               style={styles.showResultsBtn}
-              onPress={() => setFilterSheetOpen(false)}
+              onPress={() => {
+                setSortBy(draftSortBy);
+                setWalkInsOnly(draftWalkInsOnly);
+                setFilterSheetOpen(false);
+              }}
             >
               <Text style={styles.showResultsText}>Show results</Text>
             </TouchableOpacity>
@@ -314,10 +329,13 @@ const styles = StyleSheet.create({
   scrollArrow: {
     position: "absolute",
     right: 6,
-    top: "50%",
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+  },
+  scrollArrowText: {
     color: "#6B7280",
     fontSize: 18,
-    marginTop: -10,
   },
   chipRow: { paddingHorizontal: 16, paddingVertical: 12, gap: 8, alignItems: 'center' },
   chip: {
@@ -335,6 +353,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingBottom: 8,
+    zIndex: 10,
   },
   budgetScrollWrap: { flex: 1, position: "relative" },
   budgetChipRow: { paddingHorizontal: 16, gap: 8, alignItems: "center" },
@@ -380,6 +399,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#2A2A2A",
     zIndex: 100,
+    elevation: 10,
     minWidth: 110,
     overflow: "hidden",
   },

@@ -18,6 +18,7 @@ export interface Event {
   travel_distance_km?: number | null;
   travel_source?: string | null;
   surprise_score?: number | null;
+  walk_in?: boolean | null;
 }
 
 export interface FetchEventsParams {
