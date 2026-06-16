@@ -141,19 +141,73 @@ export default function TonightFeed({ navigation }: Props) {
         <Text style={styles.scrollArrow} pointerEvents="none">›</Text>
       </View>
 
-      {/* Mode + filter row */}
-      <View style={styles.modeRow}>
-        {["transit", "walk", "drive"].map((m) => (
+      {/* Row 2 — Budget chips + pinned buttons */}
+      <View style={styles.budgetRow}>
+        {/* Left: scrollable budget chips */}
+        <View style={styles.budgetScrollWrap}>
+          <FlatList
+            data={BUDGETS}
+            horizontal
+            keyExtractor={(b) => b.label}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.budgetChipRow}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[styles.budgetChip, budgetMax === item.value && styles.budgetChipActive]}
+                onPress={() => setBudgetMax(item.value)}
+              >
+                <Text style={[styles.budgetChipText, budgetMax === item.value && styles.budgetChipTextActive]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            )}
+          />
+          <LinearGradient
+            colors={["transparent", "#0A0A0A"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.budgetFadeRight}
+            pointerEvents="none"
+          />
+        </View>
+
+        {/* Right: pinned mode + filter buttons */}
+        <View style={styles.pinnedButtons}>
+          {/* Mode button + inline picker */}
+          <View>
+            <TouchableOpacity
+              style={styles.modeButton}
+              onPress={() => setModePickerOpen((v) => !v)}
+            >
+              <Text style={styles.modeButtonText}>{MODE_EMOJI[mode]} ▾</Text>
+            </TouchableOpacity>
+            {modePickerOpen && (
+              <View style={styles.modePicker}>
+                {MODES.map((m) => (
+                  <TouchableOpacity
+                    key={m.key}
+                    style={styles.modePickerItem}
+                    onPress={() => { setMode(m.key); setModePickerOpen(false); }}
+                  >
+                    <Text style={styles.modePickerText}>{m.emoji} {m.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+
+          {/* Filter button */}
           <TouchableOpacity
-            key={m}
-            style={[styles.modeChip, mode === (m as "transit" | "walk" | "drive") && styles.modeChipActive]}
-            onPress={() => setMode(m as "transit" | "walk" | "drive")}
+            style={styles.filterButton}
+            onPress={() => setFilterSheetOpen(true)}
           >
-            <Text style={[styles.modeText, mode === (m as "transit" | "walk" | "drive") && styles.modeTextActive]}>
-              {m === "transit" ? "🚇 Transit" : m === "walk" ? "🚶 Walk" : "🚗 Drive"}
-            </Text>
+            <View style={styles.filterIconWrap}>
+              <View style={[styles.filterLine, { width: 14 }]} />
+              <View style={[styles.filterLine, { width: 10 }]} />
+              <View style={[styles.filterLine, { width: 6 }]} />
+            </View>
           </TouchableOpacity>
-        ))}
+        </View>
       </View>
 
       {/* Events list */}
@@ -217,21 +271,74 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: "#FF6B35", borderColor: "#FF6B35" },
   chipText: { color: "#9CA3AF", fontSize: 13, fontWeight: "500" },
   chipTextActive: { color: "#FFFFFF", fontWeight: "700" },
-  modeRow: {
+  budgetRow: {
     flexDirection: "row",
-    paddingHorizontal: 16,
-    gap: 8,
-    marginBottom: 8,
+    alignItems: "center",
+    paddingBottom: 8,
   },
-  modeChip: {
+  budgetScrollWrap: { flex: 1, position: "relative" },
+  budgetChipRow: { paddingHorizontal: 16, gap: 8, alignItems: "center" },
+  budgetChip: {
     paddingHorizontal: 12,
     paddingVertical: 5,
-    borderRadius: 8,
+    borderRadius: 20,
     backgroundColor: "#1A1A1A",
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
   },
-  modeChipActive: { backgroundColor: "#252525" },
-  modeText: { color: "#6B7280", fontSize: 12 },
-  modeTextActive: { color: "#FFFFFF" },
+  budgetChipActive: { backgroundColor: "#F5A623", borderColor: "#F5A623" },
+  budgetChipText: { color: "#9CA3AF", fontSize: 13, fontWeight: "500" },
+  budgetChipTextActive: { color: "#111111", fontWeight: "700" },
+  budgetFadeRight: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 32,
+  },
+  pinnedButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingRight: 12,
+    gap: 8,
+  },
+  modeButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: "#1A1A1A",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  modeButtonText: { color: "#FFFFFF", fontSize: 13 },
+  modePicker: {
+    position: "absolute",
+    top: 36,
+    right: 0,
+    backgroundColor: "#1C1C1C",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    zIndex: 100,
+    minWidth: 110,
+    overflow: "hidden",
+  },
+  modePickerItem: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  modePickerText: { color: "#FFFFFF", fontSize: 14 },
+  filterButton: {
+    padding: 8,
+    backgroundColor: "#1A1A1A",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  filterIconWrap: { gap: 3, alignItems: "flex-start" },
+  filterLine: { height: 1.5, backgroundColor: "#9CA3AF", borderRadius: 1 },
   countLabel: {
     color: "#4B5563",
     fontSize: 12,
