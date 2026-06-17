@@ -243,9 +243,10 @@ export default function TonightFeed({ navigation }: Props) {
             {location ? " · near you" : " · NYC"}
           </Text>
         }
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <EventCard
             event={item}
+            index={index}
             onPress={() => navigation.navigate("EventDetail", { event: item })}
           />
         )}
