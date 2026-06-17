@@ -19,6 +19,7 @@ export interface Event {
   travel_source?: string | null;
   surprise_score?: number | null;
   walk_in?: boolean | null;
+  hook?: string | null;
 }
 
 export interface FetchEventsParams {
