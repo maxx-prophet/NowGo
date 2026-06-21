@@ -20,6 +20,8 @@ export interface Event {
   surprise_score?: number | null;
   walk_in?: boolean | null;
   hook?: string | null;
+  venue_lat?: number | null;
+  venue_lng?: number | null;
 }
 
 export interface FetchEventsParams {

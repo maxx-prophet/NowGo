@@ -7,6 +7,7 @@ import { runAvailabilityCheck } from "./services/availability.js";
 import { runGenreEnrichment } from "./services/genre-enrichment.js";
 import { runSurpriseScore } from "./services/surprise-score.js";
 import { runVenueEmbeddings } from "./services/venue-embeddings.js";
+import { runHookGeneration } from "./services/hook-generation.js";
 import pool from "../db/index.js";
 
 // ─── ALIAS MAP ───────────────────────────────────────────────────────────────
@@ -53,6 +54,7 @@ export async function runPipeline() {
     await runAvailabilityCheck();
     await runGenreEnrichment();
     await runSurpriseScore();
+    await runHookGeneration();
     console.log(`  🏁 Pipeline complete [${new Date().toISOString()}]\n`);
   } catch (err) {
     console.error(`  ❌ Pipeline failed: ${err.message}\n`);

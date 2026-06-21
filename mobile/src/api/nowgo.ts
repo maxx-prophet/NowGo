@@ -45,6 +45,23 @@ export async function fetchTonightEvents(
   return res.json();
 }
 
+export async function fetchTravel({
+  fromLat, fromLng, toLat, toLng, mode = "transit", startTime,
+}: {
+  fromLat: number; fromLng: number; toLat: number; toLng: number;
+  mode?: "transit" | "walk" | "drive"; startTime?: string;
+}): Promise<{ travel_minutes: number | null; distance_km: number | null; leave_by: string | null; travel_source: string | null }> {
+  const params = new URLSearchParams({
+    from_lat: String(fromLat), from_lng: String(fromLng),
+    to_lat: String(toLat),    to_lng: String(toLng),
+    mode: MODE_API_MAP[mode],
+  });
+  if (startTime) params.set("start_time", startTime);
+  const res = await fetch(`${API_BASE}/travel?${params}`);
+  if (!res.ok) throw new Error(`Travel API error ${res.status}`);
+  return res.json();
+}
+
 export async function fetchEvent(id: string): Promise<Event> {
   const res = await fetch(`${API_BASE}/events/${id}`);
   if (!res.ok) throw new Error(`API error ${res.status}`);

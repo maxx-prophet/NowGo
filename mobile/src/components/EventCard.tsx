@@ -4,7 +4,7 @@ import {
 } from "react-native";
 import type { Event } from "../types";
 import {
-  formatTime, formatPrice, leaveByResult, contextualLabelResult,
+  formatTime, formatPrice, leaveByResult, contextualLabelResult, getAvailabilityBadge,
 } from "./eventCardHelpers";
 
 const SEGMENT_COLORS: Record<string, string> = {
@@ -35,13 +35,6 @@ const SEGMENT_EMOJI: Record<string, string> = {
   Nightlife: "🌙",
 };
 
-const AVAILABILITY_BADGES: Record<string, { label: string; bg: string; color: string }> = {
-  available:    { label: "✅ Available", bg: "#14532d", color: "#4ade80" },
-  limited:      { label: "⚠️ Limited",   bg: "#422006", color: "#fb923c" },
-  walk_in:      { label: "🚶 Walk-in",   bg: "#1e3a5f", color: "#93c5fd" },
-  walk_in_only: { label: "🚶 Walk-in",   bg: "#1e3a5f", color: "#93c5fd" },
-  sold_out:     { label: "🚫 Sold Out",  bg: "#1F1F1F", color: "#6B7280" },
-};
 
 interface EventCardProps {
   event: Event;
@@ -68,9 +61,7 @@ export default function EventCard({ event, onPress, index = 0 }: EventCardProps)
   const isSoldOut = event.availability_tier === "sold_out";
   const dotColor = SEGMENT_COLORS[event.segment ?? ""] ?? "#6B7280";
   const emoji = SEGMENT_EMOJI[event.segment ?? ""] ?? "📍";
-  const badge = AVAILABILITY_BADGES[event.availability_tier] ?? {
-    label: "📅 Check", bg: "#1F1F1F", color: "#6B7280",
-  };
+  const badge = getAvailabilityBadge(event.availability_tier, event.start_time, now);
   const price = formatPrice(event.price_min, event.price_max, event.is_free);
   const timeStr = formatTime(event.start_time);
   const lb = leaveByResult(event.leave_by, event.availability_tier, now);

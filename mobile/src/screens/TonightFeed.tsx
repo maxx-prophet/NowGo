@@ -71,7 +71,12 @@ export default function TonightFeed({ navigation }: Props) {
 
   const load = useCallback(async (isRefresh = false) => {
     try {
-      isRefresh ? setRefreshing(true) : setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+        setEvents([]); // clear stale results so empty state shows during filter change
+      }
       setError(null);
       const data = await fetchTonightEvents({
         lat: location?.latitude,
@@ -91,6 +96,17 @@ export default function TonightFeed({ navigation }: Props) {
     }
   }, [location, category, mode, budgetMax, sortBy, walkInsOnly]);
 
+  function clearFilters() {
+    setCategory("All");
+    setBudgetMax(undefined);
+    setWalkInsOnly(false);
+    setSortBy("best");
+    setDraftSortBy("best");
+    setDraftWalkInsOnly(false);
+  }
+
+  const isFiltered = category !== "All" || budgetMax !== undefined || walkInsOnly;
+
   useEffect(() => {
     if (filterSheetOpen) {
       setDraftSortBy(sortBy);
@@ -99,25 +115,6 @@ export default function TonightFeed({ navigation }: Props) {
   }, [filterSheetOpen]);
 
   useEffect(() => { load(); }, [load]);
-
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color="#FF6B35" size="large" />
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>⚠️ {error}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
-          <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
@@ -229,25 +226,52 @@ export default function TonightFeed({ navigation }: Props) {
           <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor="#FF6B35" />
         }
         ListEmptyComponent={
-          <View style={styles.center}>
-            <Text style={styles.emptyText}>No events found tonight</Text>
+          <View style={styles.emptyState}>
+            {loading ? (
+              <ActivityIndicator color="#FF6B35" size="large" />
+            ) : error ? (
+              <>
+                <Text style={styles.errorText}>⚠️ {error}</Text>
+                <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
+                  <Text style={styles.retryText}>Retry</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.emptyText}>
+                  {isFiltered ? "No events match your filters" : "No events tonight"}
+                </Text>
+                {isFiltered && (
+                  <TouchableOpacity style={styles.clearBtn} onPress={clearFilters}>
+                    <Text style={styles.clearBtnText}>Clear filters</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
           </View>
         }
         ListHeaderComponent={
-          <Text
-            style={styles.countLabel}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {events.length} events tonight
-            {location ? " · near you" : " · NYC"}
-          </Text>
+          events.length > 0 ? (
+            <Text
+              style={styles.countLabel}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {events.length} events tonight
+              {location ? " · near you" : " · NYC"}
+            </Text>
+          ) : null
         }
         renderItem={({ item, index }) => (
           <EventCard
             event={item}
             index={index}
-            onPress={() => navigation.navigate("EventDetail", { event: item })}
+            onPress={() => navigation.navigate("EventDetail", {
+              event: item,
+              userLat: location?.latitude ?? null,
+              userLng: location?.longitude ?? null,
+              initialMode: mode,
+            })}
           />
         )}
         contentContainerStyle={styles.listContent}
@@ -327,7 +351,6 @@ export default function TonightFeed({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0A0A0A" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0A0A0A" },
   categoryRowWrap: { position: "relative" },
   fadeRight: {
     position: "absolute",
@@ -453,7 +476,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   retryText: { color: "#FF6B35", fontWeight: "600" },
-  emptyText: { color: "#4B5563", fontSize: 15 },
+  emptyState: {
+    paddingTop: 80,
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  emptyText: { color: "#4B5563", fontSize: 15, textAlign: "center" },
+  clearBtn: {
+    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: "#1A1A1A",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  clearBtnText: { color: "#FF6B35", fontWeight: "600", fontSize: 14 },
   sheetBackdrop: {
     flex: 1,
     justifyContent: "flex-end",

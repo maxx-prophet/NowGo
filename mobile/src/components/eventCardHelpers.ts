@@ -1,3 +1,29 @@
+export interface BadgeResult {
+  label: string;
+  bg: string;
+  color: string;
+}
+
+const AVAILABILITY_BADGES: Record<string, BadgeResult> = {
+  available:    { label: "✅ Available", bg: "#14532d", color: "#4ade80" },
+  limited:      { label: "⚠️ Limited",   bg: "#422006", color: "#fb923c" },
+  walk_in:      { label: "🚶 Walk-in",   bg: "#1e3a5f", color: "#93c5fd" },
+  walk_in_only: { label: "🚶 Walk-in",   bg: "#1e3a5f", color: "#93c5fd" },
+  sold_out:     { label: "🚫 Sold Out",  bg: "#1F1F1F", color: "#6B7280" },
+};
+
+export function getAvailabilityBadge(
+  availabilityTier: string,
+  startTime: string,
+  now: Date = new Date()
+): BadgeResult {
+  const hasStarted = new Date(startTime) < now;
+  if (hasStarted && availabilityTier === "available") {
+    return { label: "🎵 Live", bg: "#14532d", color: "#4ade80" };
+  }
+  return AVAILABILITY_BADGES[availabilityTier] ?? { label: "📅 Check", bg: "#1F1F1F", color: "#6B7280" };
+}
+
 export interface LeaveByResult {
   text: string;
   color: string;

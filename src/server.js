@@ -76,7 +76,7 @@ app.get("/events/tonight", async (req, res) => {
           e.event_id, e.source, e.name, e.start_time, e.url,
           e.segment, e.genre, e.price_min, e.price_max, e.is_free,
           e.availability_tier, e.last_checked_at, e.surprise_score,
-          e.walk_in,
+          e.walk_in, e.hook,
           v.name        AS venue_name,
           v.address     AS venue_address,
           v.neighborhood,
@@ -103,10 +103,12 @@ app.get("/events/tonight", async (req, res) => {
           e.event_id, e.source, e.name, e.start_time, e.url,
           e.segment, e.genre, e.price_min, e.price_max, e.is_free,
           e.availability_tier, e.last_checked_at, e.surprise_score,
-          e.walk_in,
+          e.walk_in, e.hook,
           v.name        AS venue_name,
           v.address     AS venue_address,
-          v.neighborhood
+          v.neighborhood,
+          v.geo_lat     AS venue_lat,
+          v.geo_lng     AS venue_lng
         FROM events e
         LEFT JOIN venues v ON e.venue_id = v.venue_id
         WHERE e.start_time > NOW() - interval '30 minutes'
@@ -176,6 +178,38 @@ app.get("/events/:id", async (req, res) => {
     );
     if (!rows.length) return res.status(404).json({ error: "Event not found" });
     res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── GET /travel ─────────────────────────────────────────────────────────────
+// Query params: from_lat, from_lng, to_lat, to_lng, mode, start_time, buffer_minutes
+
+app.get("/travel", async (req, res) => {
+  const fromLat = parseFloat(req.query.from_lat);
+  const fromLng = parseFloat(req.query.from_lng);
+  const toLat   = parseFloat(req.query.to_lat);
+  const toLng   = parseFloat(req.query.to_lng);
+  const mode    = req.query.mode ?? "transit";
+  const startTime     = req.query.start_time ?? null;
+  const bufferMinutes = parseInt(req.query.buffer_minutes) || 10;
+
+  if ([fromLat, fromLng, toLat, toLng].some(isNaN)) {
+    return res.status(400).json({ error: "from_lat, from_lng, to_lat, to_lng are required" });
+  }
+
+  try {
+    const travel = await getTravelTime(fromLat, fromLng, toLat, toLng, mode, startTime);
+    if (!travel) return res.json({ travel_minutes: null, distance_km: null, leave_by: null, travel_source: null });
+
+    const leaveBy = startTime ? computeLeaveBy(startTime, travel.minutes, bufferMinutes) : null;
+    res.json({
+      travel_minutes: travel.minutes,
+      distance_km: travel.distance_km,
+      leave_by: leaveBy,
+      travel_source: travel.source,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

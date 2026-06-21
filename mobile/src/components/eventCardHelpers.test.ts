@@ -4,6 +4,7 @@ import {
   formatPrice,
   leaveByResult,
   contextualLabelResult,
+  getAvailabilityBadge,
 } from "./eventCardHelpers.ts";
 
 // formatPrice
@@ -102,4 +103,33 @@ test("contextualLabelResult: starts in >60min shows Starts in Xh Ym", () => {
   const startTime = "2026-06-16T20:00:00Z"; // 2hrs away
   const result = contextualLabelResult(startTime, 10, now);
   assert.equal(result.text, "Starts in 2h 0m");
+});
+
+// getAvailabilityBadge
+test("getAvailabilityBadge: available + not started returns Available", () => {
+  const now = new Date("2026-06-18T19:00:00Z");
+  const startTime = "2026-06-18T20:00:00Z"; // future
+  const badge = getAvailabilityBadge("available", startTime, now);
+  assert.equal(badge.label, "✅ Available");
+});
+
+test("getAvailabilityBadge: available + started returns Live", () => {
+  const now = new Date("2026-06-18T21:00:00Z");
+  const startTime = "2026-06-18T20:00:00Z"; // 1hr ago
+  const badge = getAvailabilityBadge("available", startTime, now);
+  assert.equal(badge.label, "🎵 Live");
+});
+
+test("getAvailabilityBadge: limited + started keeps Limited", () => {
+  const now = new Date("2026-06-18T21:00:00Z");
+  const startTime = "2026-06-18T20:00:00Z";
+  const badge = getAvailabilityBadge("limited", startTime, now);
+  assert.equal(badge.label, "⚠️ Limited");
+});
+
+test("getAvailabilityBadge: sold_out + started keeps Sold Out", () => {
+  const now = new Date("2026-06-18T21:00:00Z");
+  const startTime = "2026-06-18T20:00:00Z";
+  const badge = getAvailabilityBadge("sold_out", startTime, now);
+  assert.equal(badge.label, "🚫 Sold Out");
 });
