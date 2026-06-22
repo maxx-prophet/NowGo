@@ -36,7 +36,11 @@ export function rankEvents(events, { sort = "best_match", surpriseMe = false, bu
         const mins = (new Date(e.start_time).getTime() - nowMs) / 60000;
         return mins >= 30 && mins <= 90;
       })
-      .sort((a, b) => scoreEvent(b, nowMs, budget) - scoreEvent(a, nowMs, budget))
+      .sort((a, b) => {
+        const scoreDiff = scoreEvent(b, nowMs, budget) - scoreEvent(a, nowMs, budget);
+        if (scoreDiff !== 0) return scoreDiff;
+        return Math.random() - 0.5; // random tiebreak so same-score events vary each call
+      })
       .slice(0, 5);
   }
 

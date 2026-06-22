@@ -56,6 +56,27 @@ function leaveByDisplay(leaveBy: string | null | undefined): { label: string; co
   return { label: `Leave by ${t}`, color: "#22C55E" };
 }
 
+const MAPS_DIR_FLAG: Record<TravelMode, string> = {
+  transit: "r",
+  walk: "w",
+  drive: "d",
+};
+
+function openMapsDirections(
+  venueLat: number | null | undefined,
+  venueLng: number | null | undefined,
+  venueAddress: string | null | undefined,
+  mode: TravelMode
+) {
+  const flag = MAPS_DIR_FLAG[mode];
+  if (venueLat != null && venueLng != null) {
+    Linking.openURL(`maps://maps.apple.com/?daddr=${venueLat},${venueLng}&dirflg=${flag}`);
+  } else if (venueAddress) {
+    const encoded = encodeURIComponent(venueAddress);
+    Linking.openURL(`maps://maps.apple.com/?daddr=${encoded}&dirflg=${flag}`);
+  }
+}
+
 export default function EventDetail({ route }: Props) {
   const { event, userLat, userLng, initialMode = "transit" } = route.params;
 
@@ -171,16 +192,32 @@ export default function EventDetail({ route }: Props) {
         </View>
       ) : null}
 
-      {/* CTA */}
-      {event.url ? (
-        <TouchableOpacity style={styles.ticketsBtn} onPress={() => Linking.openURL(event.url!)}>
-          <Text style={styles.ticketsBtnText}>Get Tickets →</Text>
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.noTicketsNote}>
-          <Text style={styles.noTicketsText}>Walk-in or check venue for tickets</Text>
-        </View>
-      )}
+      {/* CTA row */}
+      <View style={styles.ctaRow}>
+        {/* Primary: tickets or walk-in note */}
+        {event.url ? (
+          <TouchableOpacity
+            style={styles.ticketsBtn}
+            onPress={() => Linking.openURL(event.url!)}
+          >
+            <Text style={styles.ticketsBtnText}>Get Tickets →</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.walkInNote}>
+            <Text style={styles.walkInText}>Walk-in · No ticket needed</Text>
+          </View>
+        )}
+
+        {/* Secondary: directions — shows if event has an address or coords */}
+        {(event.venue_lat != null || event.venue_address != null) && (
+          <TouchableOpacity
+            style={styles.directionsBtn}
+            onPress={() => openMapsDirections(event.venue_lat, event.venue_lng, event.venue_address, mode)}
+          >
+            <Text style={styles.directionsBtnText}>📍 Directions</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -243,14 +280,44 @@ const styles = StyleSheet.create({
   leaveCardUnknown: { color: "#4B5563", fontSize: 16, marginBottom: 6 },
   leaveCardSub: { color: "#6B7280", fontSize: 13 },
 
+  ctaRow: {
+    gap: 10,
+  },
   ticketsBtn: {
-    backgroundColor: "#FF6B35", borderRadius: 12,
-    paddingVertical: 16, alignItems: "center",
+    backgroundColor: "#FF6B35",
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: "center",
   },
-  ticketsBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
-  noTicketsNote: {
-    borderWidth: 1, borderColor: "#2A2A2A", borderRadius: 12,
-    paddingVertical: 16, alignItems: "center",
+  ticketsBtnText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
   },
-  noTicketsText: { color: "#6B7280", fontSize: 15 },
+  walkInNote: {
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    backgroundColor: "#1A1A1A",
+  },
+  walkInText: {
+    color: "#93c5fd",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  directionsBtn: {
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    backgroundColor: "#1A1A1A",
+  },
+  directionsBtnText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
 });
