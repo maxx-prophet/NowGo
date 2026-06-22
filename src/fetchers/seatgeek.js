@@ -39,7 +39,7 @@ function normalizeSeatGeekEvent(e) {
     hockey: "Sports",
     theater: "Arts & Theatre",
     broadway: "Arts & Theatre",
-    comedy: "Arts & Theatre",
+    comedy: "Comedy",
     classical: "Arts & Theatre",
     dance_performance_tour: "Arts & Theatre",
     entertainment: "Arts & Theatre",
