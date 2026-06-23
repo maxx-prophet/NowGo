@@ -54,8 +54,21 @@ export async function runAvailabilityCheck() {
   console.log("🎟  Availability check starting...");
 
   if (!TD_USERNAME || !TD_PASSWORD) {
-    console.warn("  ⚠️  TICKETSDATA credentials missing — skipping");
+    console.log("  ℹ️  TICKETSDATA credentials missing — skipping (tiers set at ingest)");
     return;
+  }
+
+  // Bail early if quota is exhausted rather than burning through 51 erroring requests
+  const testRes = await fetch(
+    `https://ticketsdata.com/fetch?username=${TD_USERNAME}&password=${TD_PASSWORD}&platform=ticketmaster&event_url=https://www.ticketmaster.com`
+  ).catch(() => null);
+
+  if (testRes?.status === 403) {
+    const body = await testRes.json().catch(() => ({}));
+    if (body?.detail?.toLowerCase().includes("quota")) {
+      console.warn("  ⚠️  TicketsData quota exhausted — skipping availability check");
+      return;
+    }
   }
 
   const { rows: events } = await pool.query(`
@@ -99,7 +112,6 @@ export async function runAvailabilityCheck() {
       await sleep(DELAY_MS);
     } catch (err) {
       errors++;
-      // Only overwrite if still in the default unknown state
       await pool.query(
         `UPDATE events SET availability_tier = 'unverified', last_checked_at = now()
          WHERE event_id = $1 AND availability_tier = 'unknown'`,
