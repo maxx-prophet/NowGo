@@ -89,7 +89,7 @@ app.get("/events/tonight", async (req, res) => {
           AND e.start_time < (date_trunc('day', NOW() AT TIME ZONE 'America/New_York') + interval '1 day 4 hours') AT TIME ZONE 'America/New_York'
           AND e.availability_tier != 'cancelled'
            ${includeSoldOut ? "" : "AND e.availability_tier != 'sold_out'"} 
-          AND ($5::text IS NULL OR e.segment = $5 OR ($5 = 'Jazz' AND e.genre = 'Jazz') OR ($5 = 'Comedy' AND e.genre = 'Comedy'))
+          AND ($5::text IS NULL OR e.segment = $5 OR ($5 = 'Jazz' AND e.genre = 'Jazz') OR ($5 = 'Comedy' AND e.genre = 'Comedy') OR ($5 = 'Theatre' AND e.segment = 'Arts & Theatre'))
           AND (v.geo_lat IS NULL OR (
             abs(v.geo_lat - $1) < ($3 / 111.0)
             AND abs(v.geo_lng - $2) < ($3 / (111.0 * cos(radians(v.geo_lat))))
@@ -115,7 +115,7 @@ app.get("/events/tonight", async (req, res) => {
           AND e.start_time < (date_trunc('day', NOW() AT TIME ZONE 'America/New_York') + interval '1 day 4 hours') AT TIME ZONE 'America/New_York'
           AND e.availability_tier != 'cancelled'
            ${includeSoldOut ? "" : "AND e.availability_tier != 'sold_out'"} 
-          AND ($2::text IS NULL OR e.segment = $2 OR ($2 = 'Jazz' AND e.genre = 'Jazz') OR ($2 = 'Comedy' AND e.genre = 'Comedy'))
+          AND ($2::text IS NULL OR e.segment = $2 OR ($2 = 'Jazz' AND e.genre = 'Jazz') OR ($2 = 'Comedy' AND e.genre = 'Comedy') OR ($2 = 'Theatre' AND e.segment = 'Arts & Theatre'))
         ORDER BY e.start_time ASC
         LIMIT $1`;
       params = [RANKING_POOL, segment];

@@ -34,7 +34,7 @@ export function rankEvents(events, { sort = "best_match", surpriseMe = false, bu
       .filter(e => VERIFIED.has(e.availability_tier))
       .filter(e => {
         const mins = (new Date(e.start_time).getTime() - nowMs) / 60000;
-        return mins >= 30 && mins <= 90;
+        return mins >= 0 && mins <= 240;
       })
       .sort((a, b) => {
         const scoreDiff = scoreEvent(b, nowMs, budget) - scoreEvent(a, nowMs, budget);

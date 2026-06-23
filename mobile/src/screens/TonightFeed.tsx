@@ -11,7 +11,7 @@ import { fetchTonightEvents } from "../api/nowgo";
 import type { Event } from "../types";
 
 const CATEGORIES = [
-  "All", "Jazz", "Music", "Comedy", "Theater",
+  "All", "Jazz", "Music", "Comedy", "Theatre",
   "Sports", "Art", "Outdoors", "Film", "Talks", "Nightlife", "Family",
 ];
 
@@ -59,6 +59,11 @@ export default function TonightFeed({ navigation }: Props) {
   const [modePickerOpen, setModePickerOpen] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
+  const [surpriseEvents, setSurpriseEvents] = useState<Event[]>([]);
+  const [surpriseIndex, setSurpriseIndex] = useState(0);
+  const [surpriseOpen, setSurpriseOpen] = useState(false);
+  const [surpriseLoading, setSurpriseLoading] = useState(false);
+
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -103,6 +108,25 @@ export default function TonightFeed({ navigation }: Props) {
     setSortBy("best");
     setDraftSortBy("best");
     setDraftWalkInsOnly(false);
+  }
+
+  async function loadSurprise() {
+    setSurpriseLoading(true);
+    setSurpriseOpen(true);
+    setSurpriseIndex(0);
+    try {
+      const data = await fetchTonightEvents({
+        lat: location?.latitude,
+        lng: location?.longitude,
+        mode,
+        surpriseMe: true,
+      });
+      setSurpriseEvents(data.events ?? []);
+    } catch {
+      setSurpriseEvents([]);
+    } finally {
+      setSurpriseLoading(false);
+    }
   }
 
   const isFiltered = category !== "All" || budgetMax !== undefined || walkInsOnly;
@@ -217,6 +241,11 @@ export default function TonightFeed({ navigation }: Props) {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Surprise Me button */}
+      <TouchableOpacity style={styles.surpriseBtn} onPress={loadSurprise}>
+        <Text style={styles.surpriseBtnText}>🎲  Surprise Me</Text>
+      </TouchableOpacity>
 
       {/* Events list */}
       <FlatList
@@ -342,6 +371,60 @@ export default function TonightFeed({ navigation }: Props) {
             >
               <Text style={styles.showResultsText}>Show results</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Surprise Me modal */}
+      <Modal
+        visible={surpriseOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSurpriseOpen(false)}
+      >
+        <View style={styles.sheetBackdrop}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFillObject}
+            onPress={() => setSurpriseOpen(false)}
+            activeOpacity={1}
+          />
+          <View style={styles.sheet}>
+            <Text style={styles.sheetHeading}>🎲 Tonight's Pick</Text>
+
+            {surpriseLoading ? (
+              <ActivityIndicator color="#FF6B35" size="large" style={{ marginVertical: 32 }} />
+            ) : surpriseEvents.length === 0 ? (
+              <Text style={styles.surpriseEmpty}>
+                No events in the next 90 min that are confirmed available. Check back soon!
+              </Text>
+            ) : (
+              <>
+                <EventCard
+                  event={surpriseEvents[surpriseIndex]}
+                  index={0}
+                  onPress={() => {
+                    setSurpriseOpen(false);
+                    navigation.navigate("EventDetail", {
+                      event: surpriseEvents[surpriseIndex],
+                      userLat: location?.latitude ?? null,
+                      userLng: location?.longitude ?? null,
+                      initialMode: mode,
+                    });
+                  }}
+                />
+
+                <View style={styles.surpriseNav}>
+                  <Text style={styles.surpriseCount}>
+                    {surpriseIndex + 1} of {surpriseEvents.length}
+                  </Text>
+                  {surpriseIndex < surpriseEvents.length - 1 && (
+                    <TouchableOpacity onPress={() => setSurpriseIndex(i => i + 1)}>
+                      <Text style={styles.surpriseNext}>Try another →</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </>
+            )}
           </View>
         </View>
       </Modal>
@@ -546,4 +629,43 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   showResultsText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
+  surpriseBtn: {
+    marginHorizontal: 16,
+    marginBottom: 10,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: "#1A1A1A",
+    borderWidth: 1,
+    borderColor: "#FF6B35",
+    alignItems: "center",
+  },
+  surpriseBtnText: {
+    color: "#FF6B35",
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  surpriseEmpty: {
+    color: "#6B7280",
+    fontSize: 14,
+    textAlign: "center",
+    paddingVertical: 24,
+    lineHeight: 22,
+  },
+  surpriseNav: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 12,
+    paddingHorizontal: 4,
+  },
+  surpriseCount: {
+    color: "#4B5563",
+    fontSize: 13,
+  },
+  surpriseNext: {
+    color: "#FF6B35",
+    fontSize: 14,
+    fontWeight: "600",
+  },
 });
