@@ -5,6 +5,7 @@ import type { RouteProp } from "@react-navigation/native";
 import type { Event } from "../types";
 import { fetchTravel } from "../api/nowgo";
 import { getAvailabilityBadge } from "../components/eventCardHelpers";
+import { useAnalytics } from "../services/analytics";
 
 type TravelMode = "transit" | "walk" | "drive";
 
@@ -89,6 +90,7 @@ export default function EventDetail({ route }: Props) {
   const [leaveBy, setLeaveBy] = useState<string | null | undefined>(event.leave_by);
   const [travelSource, setTravelSource] = useState<string | null>(event.travel_source ?? null);
   const [travelLoading, setTravelLoading] = useState(false);
+  const analytics = useAnalytics();
 
   async function switchMode(newMode: TravelMode) {
     if (newMode === mode || !hasGeo) return;
@@ -198,7 +200,7 @@ export default function EventDetail({ route }: Props) {
         {event.url ? (
           <TouchableOpacity
             style={styles.ticketsBtn}
-            onPress={() => Linking.openURL(event.url!)}
+            onPress={() => { analytics.ticketsTapped(event.event_id, event.name); Linking.openURL(event.url!); }}
           >
             <Text style={styles.ticketsBtnText}>Get Tickets →</Text>
           </TouchableOpacity>
@@ -212,7 +214,7 @@ export default function EventDetail({ route }: Props) {
         {(event.venue_lat != null || event.venue_address != null) && (
           <TouchableOpacity
             style={styles.directionsBtn}
-            onPress={() => openMapsDirections(event.venue_lat, event.venue_lng, event.venue_address, mode)}
+            onPress={() => { analytics.directionsTapped(event.event_id, mode); openMapsDirections(event.venue_lat, event.venue_lng, event.venue_address, mode); }}
           >
             <Text style={styles.directionsBtnText}>📍 Directions</Text>
           </TouchableOpacity>

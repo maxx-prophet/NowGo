@@ -1,0 +1,69 @@
+<h2>Current TonightFeed UI</h2>
+<p class="subtitle">What's live on device today — confirming the baseline before we redesign</p>
+
+<div class="section">
+  <div class="split">
+    <div class="mockup">
+      <div class="mockup-header">Current Filter Bar</div>
+      <div class="mockup-body" style="background:#0A0A0A; padding:12px; font-family:system-ui;">
+
+        <!-- Category chips row -->
+        <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:8px; margin-bottom:8px;">
+          <div style="background:#FF6B35; border-radius:20px; padding:6px 14px; color:#fff; font-size:13px; white-space:nowrap; flex-shrink:0;">All</div>
+          <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:20px; padding:6px 14px; color:#9CA3AF; font-size:13px; white-space:nowrap; flex-shrink:0;">Music</div>
+          <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:20px; padding:6px 14px; color:#9CA3AF; font-size:13px; white-space:nowrap; flex-shrink:0;">Arts & Theatre</div>
+          <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:20px; padding:6px 14px; color:#9CA3AF; font-size:13px; white-space:nowrap; flex-shrink:0;">Sports</div>
+          <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:20px; padding:6px 14px; color:#9CA3AF; font-size:13px; white-space:nowrap; flex-shrink:0;">Comedy</div>
+          <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:20px; padding:6px 14px; color:#9CA3AF; font-size:13px; white-space:nowrap; flex-shrink:0;">Family</div>
+        </div>
+
+        <!-- Mode chips row -->
+        <div style="display:flex; gap:8px; margin-bottom:12px;">
+          <div style="background:#252525; border-radius:8px; padding:5px 12px; color:#fff; font-size:12px;">🚇 Transit</div>
+          <div style="background:#1A1A1A; border-radius:8px; padding:5px 12px; color:#6B7280; font-size:12px;">🚶 Walk</div>
+          <div style="background:#1A1A1A; border-radius:8px; padding:5px 12px; color:#6B7280; font-size:12px;">🚗 Drive</div>
+        </div>
+
+        <!-- Count label -->
+        <div style="color:#4B5563; font-size:12px; margin-bottom:10px;">24 events tonight · near you</div>
+
+        <!-- Event cards -->
+        <div style="background:#1A1A1A; border-radius:12px; padding:12px; margin-bottom:8px; border:1px solid #2A2A2A;">
+          <div style="color:#9CA3AF; font-size:11px; margin-bottom:4px;">MUSIC · TONIGHT 8:00 PM</div>
+          <div style="color:#fff; font-size:15px; font-weight:600; margin-bottom:4px;">Jazz at Village Vanguard</div>
+          <div style="color:#6B7280; font-size:13px;">West Village · $35 · 🚇 12 min</div>
+        </div>
+        <div style="background:#1A1A1A; border-radius:12px; padding:12px; margin-bottom:8px; border:1px solid #2A2A2A;">
+          <div style="color:#9CA3AF; font-size:11px; margin-bottom:4px;">COMEDY · TONIGHT 9:30 PM</div>
+          <div style="color:#fff; font-size:15px; font-weight:600; margin-bottom:4px;">Late Night Stand-Up</div>
+          <div style="color:#6B7280; font-size:13px;">Midtown · Free · 🚶 6 min</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:16px;">
+      <h3 style="color:#F5A623; margin-bottom:12px;">Known Issues</h3>
+      <ul style="color:#9CA3AF; line-height:1.8; font-size:14px; padding-left:16px;">
+        <li>Count label text gets cut off when result number is large (e.g. "124 events tonight · ne...")</li>
+        <li>No budget filter — can't filter by Free / $25 / $50 / $100</li>
+        <li>No sort control — no way to sort by Best Match / Soonest / Nearest</li>
+        <li>No Walk-ins only toggle</li>
+        <li>Transit mode chips feel disconnected from the rest of the filters</li>
+        <li>No time window — always shows "tonight" with no narrowing</li>
+        <li>6 category options only — spec calls for 12</li>
+      </ul>
+
+      <h3 style="color:#F5A623; margin-top:20px; margin-bottom:12px;">What the Spec Calls For</h3>
+      <ul style="color:#9CA3AF; line-height:1.8; font-size:14px; padding-left:16px;">
+        <li>Budget chips: Free / &lt;$25 / &lt;$50 / &lt;$100 / Any</li>
+        <li>Category pills: All + 11 categories</li>
+        <li>Walk-ins only toggle</li>
+        <li>Sort toggle: Best Match / Soonest / Nearest / Cheapest</li>
+        <li>Location (GPS auto-detect, already wired)</li>
+        <li>Time window field</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:8px;">Does this match what you're seeing on your phone? Let me know in the terminal and we'll move to design options.</p>

@@ -9,6 +9,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import EventCard from "../components/EventCard";
 import { fetchTonightEvents } from "../api/nowgo";
 import type { Event } from "../types";
+import { useAnalytics } from "../services/analytics";
 
 const CATEGORIES = [
   "All", "Jazz", "Music", "Comedy", "Theatre",
@@ -58,6 +59,7 @@ export default function TonightFeed({ navigation }: Props) {
 
   const [modePickerOpen, setModePickerOpen] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const analytics = useAnalytics();
 
   const [surpriseEvents, setSurpriseEvents] = useState<Event[]>([]);
   const [surpriseIndex, setSurpriseIndex] = useState(0);
@@ -92,7 +94,9 @@ export default function TonightFeed({ navigation }: Props) {
         sortBy,
         walkInsOnly,
       });
-      setEvents(data.events ?? []);
+      const loaded = data.events ?? [];
+      setEvents(loaded);
+      analytics.feedLoaded(loaded.length, category);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
@@ -153,7 +157,7 @@ export default function TonightFeed({ navigation }: Props) {
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[styles.chip, category === item && styles.chipActive]}
-              onPress={() => setCategory(item)}
+              onPress={() => { setCategory(item); analytics.categorySelected(item); }}
             >
               <Text style={[styles.chipText, category === item && styles.chipTextActive]}>
                 {item}
@@ -243,7 +247,7 @@ export default function TonightFeed({ navigation }: Props) {
       </View>
 
       {/* Surprise Me button */}
-      <TouchableOpacity style={styles.surpriseBtn} onPress={loadSurprise}>
+      <TouchableOpacity style={styles.surpriseBtn} onPress={() => { loadSurprise(); analytics.surpriseMeTapped(); }}>
         <Text style={styles.surpriseBtnText}>🎲  Surprise Me</Text>
       </TouchableOpacity>
 
@@ -295,12 +299,15 @@ export default function TonightFeed({ navigation }: Props) {
           <EventCard
             event={item}
             index={index}
-            onPress={() => navigation.navigate("EventDetail", {
-              event: item,
-              userLat: location?.latitude ?? null,
-              userLng: location?.longitude ?? null,
-              initialMode: mode,
-            })}
+            onPress={() => {
+              analytics.eventTapped(item.event_id, item.name, item.segment);
+              navigation.navigate("EventDetail", {
+                event: item,
+                userLat: location?.latitude ?? null,
+                userLng: location?.longitude ?? null,
+                initialMode: mode,
+              });
+            }}
           />
         )}
         contentContainerStyle={styles.listContent}

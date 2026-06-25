@@ -1,0 +1,170 @@
+<h2>Metadata Bar — UX Problem & Fix Options</h2>
+<p class="subtitle">The wrapping issue comes from one culprit: sentence-length contextual labels in a fixed space.</p>
+
+<div class="section">
+  <h3>The Problem</h3>
+  <div style="max-width:360px; margin:0 auto; font-family:system-ui;">
+    <div style="color:#EF4444; font-size:12px; font-weight:600; text-align:center; margin-bottom:6px; letter-spacing:0.5px;">⚠ CURRENT — UNPREDICTABLE WRAPPING</div>
+    <!-- Short content = fine -->
+    <div style="background:#1A1A1A; border-radius:10px; padding:12px; margin-bottom:8px;">
+      <div style="color:#6B7280; font-size:11px; margin-bottom:6px;">Short content: ok</div>
+      <div style="background:#141414; border-radius:8px; padding:8px 10px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+        <span style="color:#fff; font-size:13px; font-weight:600;">$35</span>
+        <span style="color:#4B5563;">·</span>
+        <span style="color:#9CA3AF; font-size:12px;">8:00 PM</span>
+        <span style="color:#4B5563;">·</span>
+        <span style="color:#60a5fa; font-size:12px;">In 40 min</span>
+        <span style="flex:1;"></span>
+        <span style="background:#14532d; color:#4ade80; font-size:10px; font-weight:600; padding:2px 7px; border-radius:5px;">✅ Available</span>
+        <span style="color:#22C55E; font-size:12px; font-weight:600;">Leave 7:43</span>
+      </div>
+    </div>
+    <!-- Long content = wraps badly -->
+    <div style="background:#1A1A1A; border-radius:10px; padding:12px;">
+      <div style="color:#EF4444; font-size:11px; margin-bottom:6px;">Long content: breaks layout</div>
+      <div style="background:#141414; border-radius:8px; padding:8px 10px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+        <span style="color:#4ade80; font-size:13px; font-weight:700;">FREE</span>
+        <span style="color:#4B5563;">·</span>
+        <span style="color:#9CA3AF; font-size:12px;">6:00 PM</span>
+        <span style="color:#4B5563;">·</span>
+        <span style="color:#60a5fa; font-size:12px;">Started 20 min ago — still worth going</span>
+        <span style="flex:1;"></span>
+        <span style="background:#1e3a5f; color:#93c5fd; font-size:10px; font-weight:600; padding:2px 7px; border-radius:5px;">🚶 Walk-in</span>
+        <span style="color:#22C55E; font-size:12px; font-weight:600;">Leave by 6:28</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Fix Option 1 — Strict 2-Slot (Recommended)</h3>
+  <p style="color:#6B7280; font-size:13px; margin-bottom:10px;">Left slot: price + time. Right slot: badge icon + leave. No flex-wrap. Sentence labels eliminated — status becomes a short token (max 6 chars).</p>
+  <div style="max-width:360px; margin:0 auto; font-family:system-ui; display:flex; flex-direction:column; gap:8px;">
+
+    <div style="background:#1A1A1A; border-radius:10px; padding:12px;">
+      <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;">
+        <div style="width:8px; height:8px; border-radius:4px; background:#F59E0B; flex-shrink:0; margin-top:5px;"></div>
+        <div style="flex:1;">
+          <div style="color:#fff; font-size:16px; font-weight:600; margin-bottom:3px;">Jazz at Village Vanguard</div>
+          <div style="color:#6B7280; font-size:13px; margin-bottom:5px;">🎷 Village Vanguard · West Village</div>
+          <div style="color:#9CA3AF; font-size:13px; font-style:italic;">"NYC's most storied jazz room, intimate and electric tonight"</div>
+        </div>
+      </div>
+      <div style="background:#141414; border-radius:8px; padding:8px 10px; display:flex; align-items:center; justify-content:space-between;">
+        <!-- Left slot: price · time · status token -->
+        <div style="display:flex; align-items:center; gap:5px;">
+          <span style="color:#fff; font-size:13px; font-weight:600;">$35</span>
+          <span style="color:#374151; font-size:11px;">·</span>
+          <span style="color:#9CA3AF; font-size:12px;">8:00 PM</span>
+          <span style="color:#374151; font-size:11px;">·</span>
+          <span style="background:#1e3a5f; color:#60a5fa; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px;">In 40m</span>
+        </div>
+        <!-- Right slot: badge + leave -->
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="color:#4ade80; font-size:13px;">✅</span>
+          <span style="color:#22C55E; font-size:12px; font-weight:600;">Leave 7:43</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#1A1A1A; border-radius:10px; padding:12px;">
+      <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;">
+        <div style="width:8px; height:8px; border-radius:4px; background:#10B981; flex-shrink:0; margin-top:5px;"></div>
+        <div style="flex:1;">
+          <div style="color:#fff; font-size:16px; font-weight:600; margin-bottom:3px;">SummerStage: Free Concert</div>
+          <div style="color:#6B7280; font-size:13px;">🎵 Central Park SummerStage · Upper West Side</div>
+        </div>
+      </div>
+      <div style="background:#141414; border-radius:8px; padding:8px 10px; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:5px;">
+          <span style="color:#4ade80; font-size:13px; font-weight:700;">FREE</span>
+          <span style="color:#374151; font-size:11px;">·</span>
+          <span style="color:#9CA3AF; font-size:12px;">6:00 PM</span>
+          <span style="color:#374151; font-size:11px;">·</span>
+          <span style="background:#422006; color:#fb923c; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px;">Live</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="color:#93c5fd; font-size:13px;">🚶</span>
+          <span style="color:#22C55E; font-size:12px; font-weight:600;">Leave 6:28</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#1A1A1A; border-radius:10px; padding:12px;">
+      <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;">
+        <div style="width:8px; height:8px; border-radius:4px; background:#3B82F6; flex-shrink:0; margin-top:5px;"></div>
+        <div style="flex:1;">
+          <div style="color:#fff; font-size:16px; font-weight:600; margin-bottom:3px;">Knicks vs. Celtics</div>
+          <div style="color:#6B7280; font-size:13px; font-style:italic;">"Garden's packed tonight — last few seats going fast"</div>
+        </div>
+      </div>
+      <div style="background:#141414; border-radius:8px; padding:8px 10px; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:5px;">
+          <span style="color:#fff; font-size:13px; font-weight:600;">$120</span>
+          <span style="color:#374151; font-size:11px;">·</span>
+          <span style="color:#9CA3AF; font-size:12px;">7:30 PM</span>
+          <span style="color:#374151; font-size:11px;">·</span>
+          <span style="background:#14532d; color:#4ade80; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px;">Soon</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="color:#fb923c; font-size:13px;">⚠️</span>
+          <span style="color:#EF4444; font-size:12px; font-weight:700;">⚡ Leave NOW</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p style="color:#22C55E; font-size:12px; text-align:center; margin-top:8px;">Status tokens: In Xm · Live · Soon · Over · Now (max 5 chars, always fits)</p>
+</div>
+
+<div class="section">
+  <h3>Fix Option 2 — Deliberate 2-Row Bar</h3>
+  <p style="color:#6B7280; font-size:13px; margin-bottom:10px;">Keep the sentence label but give it its own row. Consistent height instead of unpredictable wrap.</p>
+  <div style="max-width:360px; margin:0 auto; font-family:system-ui;">
+    <div style="background:#1A1A1A; border-radius:10px; padding:12px;">
+      <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;">
+        <div style="width:8px; height:8px; border-radius:4px; background:#10B981; flex-shrink:0; margin-top:5px;"></div>
+        <div style="flex:1;">
+          <div style="color:#fff; font-size:16px; font-weight:600; margin-bottom:3px;">SummerStage: Free Concert</div>
+          <div style="color:#6B7280; font-size:13px;">🎵 Central Park · Upper West Side</div>
+        </div>
+      </div>
+      <div style="background:#141414; border-radius:8px; padding:8px 10px;">
+        <!-- Row 1: price · time · badge -->
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+          <div style="display:flex; align-items:center; gap:5px;">
+            <span style="color:#4ade80; font-size:13px; font-weight:700;">FREE</span>
+            <span style="color:#374151;">·</span>
+            <span style="color:#9CA3AF; font-size:12px;">6:00 PM</span>
+          </div>
+          <span style="background:#1e3a5f; color:#93c5fd; font-size:10px; font-weight:600; padding:2px 7px; border-radius:5px;">🚶 Walk-in</span>
+        </div>
+        <!-- Row 2: contextual + leave by -->
+        <div style="display:flex; align-items:center; justify-content:space-between; border-top:1px solid #1F2937; padding-top:6px;">
+          <span style="color:#60a5fa; font-size:11px;">Started 20 min ago — still worth it</span>
+          <span style="color:#22C55E; font-size:12px; font-weight:600; flex-shrink:0; margin-left:8px;">Leave 6:28</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Comparison</h3>
+  <table style="width:100%; border-collapse:collapse; font-size:13px; color:#9CA3AF;">
+    <thead>
+      <tr style="border-bottom:1px solid #1F2937;">
+        <th style="text-align:left; padding:8px 0; color:#fff;">Criterion</th>
+        <th style="text-align:center; padding:8px; color:#F59E0B;">Option 1 (2-slot)</th>
+        <th style="text-align:center; padding:8px; color:#60a5fa;">Option 2 (2-row)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #111;"><td style="padding:7px 0;">Visual consistency</td><td style="text-align:center; color:#4ade80;">✅ Always same height</td><td style="text-align:center; color:#4ade80;">✅ Always same height</td></tr>
+      <tr style="border-bottom:1px solid #111;"><td style="padding:7px 0;">Card compactness</td><td style="text-align:center; color:#4ade80;">✅ Single row</td><td style="text-align:center; color:#fb923c;">⚠ Taller card</td></tr>
+      <tr style="border-bottom:1px solid #111;"><td style="padding:7px 0;">Context sentence</td><td style="text-align:center; color:#EF4444;">✗ Gone (replaced by token)</td><td style="text-align:center; color:#4ade80;">✅ Preserved</td></tr>
+      <tr><td style="padding:7px 0;">Feed density</td><td style="text-align:center; color:#4ade80;">✅ More cards visible</td><td style="text-align:center; color:#fb923c;">⚠ Fewer cards</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<p class="subtitle" style="margin-top:12px;">Option 1 is the stronger UX choice — tokens are scannable in &lt;1 second; sentences require reading. Which direction?</p>

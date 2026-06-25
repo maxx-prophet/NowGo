@@ -1,0 +1,179 @@
+<h2>Constraint Bar — Proposed Design</h2>
+<p class="subtitle">Hybrid layout: always-visible rows + bottom sheet for advanced filters</p>
+
+<div class="section">
+  <div class="split">
+
+    <!-- LEFT: Phone mockup -->
+    <div class="mockup">
+      <div class="mockup-header">Feed View (always visible)</div>
+      <div class="mockup-body" style="background:#0A0A0A; padding:0; font-family:system-ui; width:280px; border-radius:8px; overflow:hidden;">
+
+        <!-- Status bar -->
+        <div style="background:#0A0A0A; padding:8px 16px 4px; display:flex; justify-content:space-between; align-items:center;">
+          <span style="color:#fff; font-size:12px; font-weight:600;">9:41</span>
+          <span style="color:#fff; font-size:11px;">●●● 📶 🔋</span>
+        </div>
+
+        <!-- Nav header -->
+        <div style="background:#0A0A0A; padding:8px 16px 10px; border-bottom:1px solid #1A1A1A;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:#fff; font-size:17px; font-weight:700;">Tonight in NYC</span>
+            <span style="color:#9CA3AF; font-size:13px;">📍 Near you</span>
+          </div>
+        </div>
+
+        <!-- ROW 1: Category pills -->
+        <div style="padding:10px 12px 6px; border-bottom:1px solid #1A1A1A; overflow-x:auto;">
+          <div style="display:flex; gap:6px; width:max-content;">
+            <div style="background:#FF6B35; border-radius:20px; padding:5px 12px; color:#fff; font-size:12px; font-weight:600; white-space:nowrap;">All</div>
+            <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:20px; padding:5px 12px; color:#9CA3AF; font-size:12px; white-space:nowrap;">Jazz</div>
+            <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:20px; padding:5px 12px; color:#9CA3AF; font-size:12px; white-space:nowrap;">Music</div>
+            <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:20px; padding:5px 12px; color:#9CA3AF; font-size:12px; white-space:nowrap;">Comedy</div>
+            <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:20px; padding:5px 12px; color:#9CA3AF; font-size:12px; white-space:nowrap;">Theater</div>
+            <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:20px; padding:5px 12px; color:#9CA3AF; font-size:12px; white-space:nowrap;">Sports</div>
+            <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:20px; padding:5px 12px; color:#9CA3AF; font-size:12px; white-space:nowrap;">Art</div>
+            <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:20px; padding:5px 12px; color:#9CA3AF; font-size:12px; white-space:nowrap;">Outdoors</div>
+            <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:20px; padding:5px 12px; color:#9CA3AF; font-size:12px; white-space:nowrap;">Film</div>
+            <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:20px; padding:5px 12px; color:#9CA3AF; font-size:12px; white-space:nowrap;">Talks</div>
+            <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:20px; padding:5px 12px; color:#9CA3AF; font-size:12px; white-space:nowrap;">Nightlife</div>
+            <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:20px; padding:5px 12px; color:#9CA3AF; font-size:12px; white-space:nowrap;">Family</div>
+          </div>
+        </div>
+
+        <!-- ROW 2: Budget + Mode + Filters -->
+        <div style="padding:8px 12px; border-bottom:1px solid #1A1A1A; display:flex; align-items:center; gap:6px;">
+          <!-- Budget chips -->
+          <div style="display:flex; gap:5px; flex:1; overflow-x:auto;">
+            <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:8px; padding:4px 9px; color:#9CA3AF; font-size:11px; white-space:nowrap;">Free</div>
+            <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:8px; padding:4px 9px; color:#9CA3AF; font-size:11px; white-space:nowrap;">&lt;$25</div>
+            <div style="background:#F5A623; border-radius:8px; padding:4px 9px; color:#0A0A0A; font-size:11px; font-weight:700; white-space:nowrap;">&lt;$50</div>
+            <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:8px; padding:4px 9px; color:#9CA3AF; font-size:11px; white-space:nowrap;">&lt;$100</div>
+            <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:8px; padding:4px 9px; color:#9CA3AF; font-size:11px; white-space:nowrap;">Any</div>
+          </div>
+          <!-- Mode button -->
+          <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:8px; padding:4px 9px; color:#fff; font-size:11px; white-space:nowrap; flex-shrink:0;">🚇 ▾</div>
+          <!-- Filters button -->
+          <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:8px; padding:4px 9px; color:#9CA3AF; font-size:11px; white-space:nowrap; flex-shrink:0;">⚙︎</div>
+        </div>
+
+        <!-- Count label - fixed truncation -->
+        <div style="color:#4B5563; font-size:12px; padding:8px 14px 4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">24 events tonight · near you</div>
+
+        <!-- Event cards -->
+        <div style="padding:0 12px 12px;">
+          <div style="background:#1A1A1A; border-radius:12px; padding:12px; margin-bottom:8px; border:1px solid #2A2A2A;">
+            <div style="color:#9CA3AF; font-size:10px; margin-bottom:3px; letter-spacing:0.5px;">JAZZ · 8:00 PM</div>
+            <div style="color:#fff; font-size:14px; font-weight:600; margin-bottom:3px;">Village Vanguard</div>
+            <div style="color:#6B7280; font-size:12px;">West Village · $35 · 🚇 12 min</div>
+          </div>
+          <div style="background:#1A1A1A; border-radius:12px; padding:12px; border:1px solid #2A2A2A;">
+            <div style="color:#9CA3AF; font-size:10px; margin-bottom:3px; letter-spacing:0.5px;">COMEDY · 9:30 PM</div>
+            <div style="color:#fff; font-size:14px; font-weight:600; margin-bottom:3px;">Late Night Stand-Up</div>
+            <div style="color:#6B7280; font-size:12px;">Midtown · Free · 🚶 6 min</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Bottom sheet mockup -->
+    <div>
+      <div class="mockup">
+        <div class="mockup-header">Filters Sheet (tapping ⚙︎)</div>
+        <div class="mockup-body" style="background:#111; border-radius:8px; font-family:system-ui; padding:0; overflow:hidden;">
+          <!-- Sheet handle -->
+          <div style="display:flex; justify-content:center; padding:10px;">
+            <div style="width:36px; height:4px; background:#333; border-radius:2px;"></div>
+          </div>
+          <div style="padding:0 20px 20px;">
+            <div style="color:#fff; font-size:17px; font-weight:700; margin-bottom:20px;">Filters</div>
+
+            <!-- Sort -->
+            <div style="color:#6B7280; font-size:11px; font-weight:600; letter-spacing:1px; margin-bottom:8px;">SORT BY</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:20px;">
+              <div style="background:#F5A623; border-radius:8px; padding:10px; color:#0A0A0A; font-size:13px; font-weight:700; text-align:center;">Best Match</div>
+              <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:8px; padding:10px; color:#9CA3AF; font-size:13px; text-align:center;">Soonest</div>
+              <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:8px; padding:10px; color:#9CA3AF; font-size:13px; text-align:center;">Nearest</div>
+              <div style="background:#1A1A1A; border:1px solid #2A2A2A; border-radius:8px; padding:10px; color:#9CA3AF; font-size:13px; text-align:center;">Cheapest</div>
+            </div>
+
+            <!-- Walk-ins only -->
+            <div style="color:#6B7280; font-size:11px; font-weight:600; letter-spacing:1px; margin-bottom:8px;">AVAILABILITY</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#1A1A1A; border:1px solid #2A2A2A; border-radius:10px; padding:12px 14px;">
+              <div>
+                <div style="color:#fff; font-size:14px; font-weight:600;">Walk-ins only</div>
+                <div style="color:#6B7280; font-size:12px; margin-top:2px;">No ticket required</div>
+              </div>
+              <div style="width:44px; height:26px; background:#34C759; border-radius:13px; position:relative;">
+                <div style="width:22px; height:22px; background:#fff; border-radius:11px; position:absolute; right:2px; top:2px;"></div>
+              </div>
+            </div>
+
+            <!-- Apply button -->
+            <div style="background:#FF6B35; border-radius:12px; padding:14px; color:#fff; font-size:15px; font-weight:700; text-align:center; margin-top:20px;">Show results</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mode dropdown -->
+      <div class="mockup" style="margin-top:12px;">
+        <div class="mockup-header">Mode Picker (tapping 🚇 ▾)</div>
+        <div class="mockup-body" style="background:#1A1A1A; border-radius:8px; font-family:system-ui; padding:8px;">
+          <div style="display:flex; gap:6px;">
+            <div style="flex:1; background:#252525; border-radius:8px; padding:10px; text-align:center;">
+              <div style="font-size:18px;">🚇</div>
+              <div style="color:#fff; font-size:11px; font-weight:600; margin-top:4px;">Transit</div>
+            </div>
+            <div style="flex:1; background:#1A1A1A; border:1px solid #2A2A2A; border-radius:8px; padding:10px; text-align:center;">
+              <div style="font-size:18px;">🚶</div>
+              <div style="color:#6B7280; font-size:11px; margin-top:4px;">Walk</div>
+            </div>
+            <div style="flex:1; background:#1A1A1A; border:1px solid #2A2A2A; border-radius:8px; padding:10px; text-align:center;">
+              <div style="font-size:18px;">🚗</div>
+              <div style="color:#6B7280; font-size:11px; margin-top:4px;">Drive</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="section">
+  <h3>What's changing</h3>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px;">
+    <div style="background:#0f1f0f; border:1px solid #1a3a1a; border-radius:8px; padding:14px;">
+      <div style="color:#4ade80; font-size:12px; font-weight:600; letter-spacing:0.5px; margin-bottom:8px;">✅ ROW 1 — Category pills</div>
+      <ul style="color:#9CA3AF; font-size:13px; line-height:1.8; padding-left:16px; margin:0;">
+        <li>Expand from 6 → 12 categories</li>
+        <li>Add Jazz, Theater, Art, Outdoors, Film, Talks, Nightlife</li>
+      </ul>
+    </div>
+    <div style="background:#0f1f0f; border:1px solid #1a3a1a; border-radius:8px; padding:14px;">
+      <div style="color:#4ade80; font-size:12px; font-weight:600; letter-spacing:0.5px; margin-bottom:8px;">✅ ROW 2 — Budget + Mode + Filters</div>
+      <ul style="color:#9CA3AF; font-size:13px; line-height:1.8; padding-left:16px; margin:0;">
+        <li>New budget chips: Free / &lt;$25 / &lt;$50 / &lt;$100 / Any</li>
+        <li>Mode condensed to icon + chevron</li>
+        <li>Gear icon opens filter sheet</li>
+      </ul>
+    </div>
+    <div style="background:#0f1f0f; border:1px solid #1a3a1a; border-radius:8px; padding:14px;">
+      <div style="color:#4ade80; font-size:12px; font-weight:600; letter-spacing:0.5px; margin-bottom:8px;">✅ FILTER SHEET — Sort + Walk-ins</div>
+      <ul style="color:#9CA3AF; font-size:13px; line-height:1.8; padding-left:16px; margin:0;">
+        <li>Sort: Best Match / Soonest / Nearest / Cheapest</li>
+        <li>Walk-ins only toggle</li>
+        <li>"Show results" closes sheet</li>
+      </ul>
+    </div>
+    <div style="background:#1a1a0f; border:1px solid #3a3a1a; border-radius:8px; padding:14px;">
+      <div style="color:#fbbf24; font-size:12px; font-weight:600; letter-spacing:0.5px; margin-bottom:8px;">🔧 BUG FIX — Count label</div>
+      <ul style="color:#9CA3AF; font-size:13px; line-height:1.8; padding-left:16px; margin:0;">
+        <li>Add <code>numberOfLines=1</code> + <code>ellipsizeMode</code> to Text component</li>
+        <li>Prevents layout breakage on large result sets</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:16px;">Does this layout feel right? Any changes before we write the spec?</p>

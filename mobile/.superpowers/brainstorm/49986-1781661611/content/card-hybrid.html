@@ -1,0 +1,104 @@
+<h2>Event Card — Hybrid Design</h2>
+<p class="subtitle">Top from Option B (dot + name + venue + hook) · Bottom bar from Option C (metadata strip)</p>
+
+<div class="section">
+  <div class="mockup" style="max-width:360px; margin:0 auto;">
+    <div class="mockup-header">Feed — 3 example cards</div>
+    <div class="mockup-body" style="background:#0A0A0A; padding:12px; font-family:system-ui; display:flex; flex-direction:column; gap:10px;">
+
+      <!-- Card 1: Standard available -->
+      <div style="background:#1A1A1A; border-radius:12px; padding:14px;">
+        <!-- Top: dot + name, right: nothing (moved to bottom bar) -->
+        <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:4px;">
+          <div style="width:8px; height:8px; border-radius:4px; background:#F59E0B; flex-shrink:0; margin-top:5px;"></div>
+          <div style="flex:1;">
+            <div style="color:#fff; font-size:16px; font-weight:600; line-height:1.3; margin-bottom:3px;">Jazz at Village Vanguard</div>
+            <div style="color:#6B7280; font-size:13px; margin-bottom:5px;">🎷 Village Vanguard · West Village</div>
+            <div style="color:#9CA3AF; font-size:13px; font-style:italic;">"NYC's most storied jazz room, intimate and electric tonight"</div>
+          </div>
+        </div>
+        <!-- Bottom metadata bar -->
+        <div style="background:#141414; border-radius:8px; padding:8px 10px; display:flex; align-items:center; gap:6px; margin-top:10px; flex-wrap:wrap;">
+          <span style="color:#fff; font-size:13px; font-weight:600;">$35</span>
+          <span style="color:#4B5563; font-size:11px;">·</span>
+          <span style="color:#9CA3AF; font-size:12px;">8:00 PM</span>
+          <span style="color:#4B5563; font-size:11px;">·</span>
+          <span style="color:#60a5fa; font-size:12px;">Starts in 40 min</span>
+          <span style="flex:1;"></span>
+          <span style="background:#14532d; color:#4ade80; font-size:10px; font-weight:600; padding:2px 7px; border-radius:5px;">✅ Available</span>
+          <span style="color:#22C55E; font-size:12px; font-weight:600;">Leave by 7:43</span>
+        </div>
+      </div>
+
+      <!-- Card 2: Limited + Leave NOW -->
+      <div style="background:#1A1A1A; border-radius:12px; padding:14px;">
+        <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:4px;">
+          <div style="width:8px; height:8px; border-radius:4px; background:#3B82F6; flex-shrink:0; margin-top:5px;"></div>
+          <div style="flex:1;">
+            <div style="color:#fff; font-size:16px; font-weight:600; line-height:1.3; margin-bottom:3px;">Knicks vs. Celtics</div>
+            <div style="color:#6B7280; font-size:13px; margin-bottom:5px;">🏆 Madison Square Garden · Midtown</div>
+            <div style="color:#9CA3AF; font-size:13px; font-style:italic;">"Garden's packed tonight — last few seats going fast"</div>
+          </div>
+        </div>
+        <div style="background:#141414; border-radius:8px; padding:8px 10px; display:flex; align-items:center; gap:6px; margin-top:10px; flex-wrap:wrap;">
+          <span style="color:#fff; font-size:13px; font-weight:600;">$120</span>
+          <span style="color:#4B5563; font-size:11px;">·</span>
+          <span style="color:#9CA3AF; font-size:12px;">7:30 PM</span>
+          <span style="color:#4B5563; font-size:11px;">·</span>
+          <span style="color:#EF4444; font-size:12px; font-weight:700;">⚡ Leave NOW</span>
+          <span style="flex:1;"></span>
+          <span style="background:#422006; color:#fb923c; font-size:10px; font-weight:600; padding:2px 7px; border-radius:5px;">⚠️ Limited</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Free walk-in, no hook yet -->
+      <div style="background:#1A1A1A; border-radius:12px; padding:14px;">
+        <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:4px;">
+          <div style="width:8px; height:8px; border-radius:4px; background:#10B981; flex-shrink:0; margin-top:5px;"></div>
+          <div style="flex:1;">
+            <div style="color:#fff; font-size:16px; font-weight:600; line-height:1.3; margin-bottom:3px;">SummerStage: Free Concert</div>
+            <div style="color:#6B7280; font-size:13px; margin-bottom:5px;">🎵 Central Park SummerStage · Upper West Side</div>
+            <!-- No hook — graceful fallback -->
+          </div>
+        </div>
+        <div style="background:#141414; border-radius:8px; padding:8px 10px; display:flex; align-items:center; gap:6px; margin-top:10px; flex-wrap:wrap;">
+          <span style="color:#4ade80; font-size:13px; font-weight:700;">FREE</span>
+          <span style="color:#4B5563; font-size:11px;">·</span>
+          <span style="color:#9CA3AF; font-size:12px;">6:00 PM</span>
+          <span style="color:#4B5563; font-size:11px;">·</span>
+          <span style="color:#60a5fa; font-size:12px;">Started 20 min ago — still worth going</span>
+          <span style="flex:1;"></span>
+          <span style="background:#1e3a5f; color:#93c5fd; font-size:10px; font-weight:600; padding:2px 7px; border-radius:5px;">🚶 Walk-in</span>
+          <span style="color:#22C55E; font-size:12px; font-weight:600;">Leave by 6:28</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>What each element does</h3>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px;">
+    <div style="background:#111; border-radius:8px; padding:12px;">
+      <div style="color:#F5A623; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:6px;">TOP SECTION</div>
+      <ul style="color:#9CA3AF; font-size:13px; line-height:1.8; padding-left:16px; margin:0;">
+        <li>Colored dot = category</li>
+        <li>Event name (bold, 2 lines max)</li>
+        <li>Emoji + venue + neighborhood</li>
+        <li>Hook in italics (hidden if null)</li>
+      </ul>
+    </div>
+    <div style="background:#111; border-radius:8px; padding:12px;">
+      <div style="color:#F5A623; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:6px;">BOTTOM BAR</div>
+      <ul style="color:#9CA3AF; font-size:13px; line-height:1.8; padding-left:16px; margin:0;">
+        <li>Price · Time · Contextual label</li>
+        <li>Availability badge (right)</li>
+        <li>Leave by time or ⚡ Leave NOW</li>
+        <li>Wraps if needed on small screens</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:12px;">Card 3 shows the graceful fallback when no hook exists yet. Does this feel right?</p>

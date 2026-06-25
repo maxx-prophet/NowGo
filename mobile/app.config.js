@@ -31,9 +31,11 @@ export default ({ config }) => ({
   web: {
     favicon: "./assets/favicon.png",
   },
+  plugins: ["expo-localization"],
   extra: {
     apiUrl: process.env.API_URL ?? "https://nowgo-production.up.railway.app",
     appEnv: process.env.APP_ENV ?? "production",
+    postHogKey: process.env.POSTHOG_KEY ?? "",
     eas: {
       projectId: "9776acca-9db0-4dab-a3e3-1d2eb6192538",
     },

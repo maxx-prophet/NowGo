@@ -33,6 +33,7 @@ export interface FetchEventsParams {
   budgetMax?: number | null;
   sortBy?: "best" | "soonest" | "nearest" | "cheapest";
   walkInsOnly?: boolean;
+  surpriseMe?: boolean;
 }
 
 export type UserIdentity = "local" | "transplant" | "visitor";

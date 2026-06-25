@@ -1,0 +1,142 @@
+<h2>Event Card — Final Design</h2>
+<p class="subtitle">Top: dot + name + venue + hook · Bottom: 2-row pill (price/time/badge | contextual + leave by)</p>
+
+<div class="section">
+  <div class="mockup" style="max-width:360px; margin:0 auto;">
+    <div class="mockup-header">TonightFeed — full card states</div>
+    <div class="mockup-body" style="background:#0A0A0A; padding:12px; font-family:system-ui; display:flex; flex-direction:column; gap:10px;">
+
+      <!-- Card 1: Available, upcoming -->
+      <div style="background:#1A1A1A; border-radius:12px; padding:14px;">
+        <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;">
+          <div style="width:8px; height:8px; border-radius:4px; background:#F59E0B; flex-shrink:0; margin-top:5px;"></div>
+          <div style="flex:1; min-width:0;">
+            <div style="color:#fff; font-size:16px; font-weight:600; line-height:1.3; margin-bottom:3px;">Jazz at Village Vanguard</div>
+            <div style="color:#6B7280; font-size:13px; margin-bottom:5px;">🎷 Village Vanguard · West Village</div>
+            <div style="color:#9CA3AF; font-size:13px; font-style:italic;">"NYC's most storied jazz room, intimate and electric tonight"</div>
+          </div>
+        </div>
+        <div style="background:#141414; border-radius:8px; padding:8px 10px;">
+          <!-- Row 1 -->
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+            <div style="display:flex; align-items:center; gap:5px;">
+              <span style="color:#fff; font-size:13px; font-weight:600;">$35</span>
+              <span style="color:#374151; font-size:11px;">·</span>
+              <span style="color:#9CA3AF; font-size:12px;">8:00 PM</span>
+            </div>
+            <span style="background:#14532d; color:#4ade80; font-size:10px; font-weight:600; padding:2px 7px; border-radius:5px; flex-shrink:0;">✅ Available</span>
+          </div>
+          <!-- Row 2 -->
+          <div style="display:flex; align-items:center; justify-content:space-between; border-top:1px solid #1F2937; padding-top:6px;">
+            <span style="color:#60a5fa; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; margin-right:8px;">Starts in 40 min</span>
+            <span style="color:#22C55E; font-size:12px; font-weight:600; flex-shrink:0;">Leave by 7:43</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Limited, leave NOW -->
+      <div style="background:#1A1A1A; border-radius:12px; padding:14px;">
+        <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;">
+          <div style="width:8px; height:8px; border-radius:4px; background:#3B82F6; flex-shrink:0; margin-top:5px;"></div>
+          <div style="flex:1; min-width:0;">
+            <div style="color:#fff; font-size:16px; font-weight:600; line-height:1.3; margin-bottom:3px;">Knicks vs. Celtics</div>
+            <div style="color:#6B7280; font-size:13px; margin-bottom:5px;">🏆 Madison Square Garden · Midtown</div>
+            <div style="color:#9CA3AF; font-size:13px; font-style:italic;">"Garden's packed tonight — last few seats going fast"</div>
+          </div>
+        </div>
+        <div style="background:#141414; border-radius:8px; padding:8px 10px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+            <div style="display:flex; align-items:center; gap:5px;">
+              <span style="color:#fff; font-size:13px; font-weight:600;">$120</span>
+              <span style="color:#374151; font-size:11px;">·</span>
+              <span style="color:#9CA3AF; font-size:12px;">7:30 PM</span>
+            </div>
+            <span style="background:#422006; color:#fb923c; font-size:10px; font-weight:600; padding:2px 7px; border-radius:5px; flex-shrink:0;">⚠️ Limited</span>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; border-top:1px solid #1F2937; padding-top:6px;">
+            <span style="color:#60a5fa; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; margin-right:8px;">Starting soon</span>
+            <span style="color:#EF4444; font-size:12px; font-weight:700; flex-shrink:0;">⚡ Leave NOW</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Free walk-in, underway, long contextual label -->
+      <div style="background:#1A1A1A; border-radius:12px; padding:14px;">
+        <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;">
+          <div style="width:8px; height:8px; border-radius:4px; background:#10B981; flex-shrink:0; margin-top:5px;"></div>
+          <div style="flex:1; min-width:0;">
+            <div style="color:#fff; font-size:16px; font-weight:600; line-height:1.3; margin-bottom:3px;">SummerStage: Free Concert</div>
+            <div style="color:#6B7280; font-size:13px;">🎵 Central Park SummerStage · Upper West Side</div>
+          </div>
+        </div>
+        <div style="background:#141414; border-radius:8px; padding:8px 10px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+            <div style="display:flex; align-items:center; gap:5px;">
+              <span style="color:#4ade80; font-size:13px; font-weight:700;">FREE</span>
+              <span style="color:#374151; font-size:11px;">·</span>
+              <span style="color:#9CA3AF; font-size:12px;">6:00 PM</span>
+            </div>
+            <span style="background:#1e3a5f; color:#93c5fd; font-size:10px; font-weight:600; padding:2px 7px; border-radius:5px; flex-shrink:0;">🚶 Walk-in</span>
+          </div>
+          <!-- Long label truncates gracefully instead of wrapping -->
+          <div style="display:flex; align-items:center; justify-content:space-between; border-top:1px solid #1F2937; padding-top:6px;">
+            <span style="color:#60a5fa; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; margin-right:8px;">Started 20 min ago — still worth going</span>
+            <span style="color:#22C55E; font-size:12px; font-weight:600; flex-shrink:0;">Leave by 6:28</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: No hook, sold out -->
+      <div style="background:#1A1A1A; border-radius:12px; padding:14px; opacity:0.7;">
+        <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;">
+          <div style="width:8px; height:8px; border-radius:4px; background:#6B7280; flex-shrink:0; margin-top:5px;"></div>
+          <div style="flex:1; min-width:0;">
+            <div style="color:#9CA3AF; font-size:16px; font-weight:600; line-height:1.3; margin-bottom:3px;">Comedy at Cellar</div>
+            <div style="color:#4B5563; font-size:13px;">🎤 Comedy Cellar · Greenwich Village</div>
+          </div>
+        </div>
+        <div style="background:#141414; border-radius:8px; padding:8px 10px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+            <div style="display:flex; align-items:center; gap:5px;">
+              <span style="color:#6B7280; font-size:13px; font-weight:600;">$25</span>
+              <span style="color:#374151; font-size:11px;">·</span>
+              <span style="color:#4B5563; font-size:12px;">9:00 PM</span>
+            </div>
+            <span style="background:#1F1F1F; color:#6B7280; font-size:10px; font-weight:600; padding:2px 7px; border-radius:5px; flex-shrink:0;">🚫 Sold Out</span>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; border-top:1px solid #1F2937; padding-top:6px;">
+            <span style="color:#4B5563; font-size:11px; flex:1;">Starts in 2 hrs</span>
+            <span style="color:#4B5563; font-size:11px; flex-shrink:0;">No travel needed</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Why the 2-row bar fixes the wrapping</h3>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+    <div style="background:#111; border-radius:8px; padding:12px;">
+      <div style="color:#EF4444; font-size:11px; font-weight:700; margin-bottom:6px;">OLD — flex-wrap</div>
+      <ul style="color:#9CA3AF; font-size:12px; line-height:1.8; padding-left:14px; margin:0;">
+        <li>Long text shoves badge to new line</li>
+        <li>Leave-by moves unpredictably</li>
+        <li>Height varies card to card</li>
+        <li>Feed looks jagged</li>
+      </ul>
+    </div>
+    <div style="background:#111; border-radius:8px; padding:12px;">
+      <div style="color:#22C55E; font-size:11px; font-weight:700; margin-bottom:6px;">NEW — 2-row pill</div>
+      <ul style="color:#9CA3AF; font-size:12px; line-height:1.8; padding-left:14px; margin:0;">
+        <li>Row 1 height: always fixed</li>
+        <li>Row 2 height: always fixed (1 line, ellipsis)</li>
+        <li>Badge always top-right</li>
+        <li>Leave-by always bottom-right</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:12px;">Card 3 shows the key fix: long contextual label truncates with ellipsis instead of wrapping. Card 4 shows sold-out state. Ready to write the spec?</p>
