@@ -41,6 +41,7 @@ export default ({ config }) => ({
           "NowGo uses your location to show events near you and estimate your travel time.",
       },
     ],
+    "./plugins/withPrivacyManifest",
   ],
   extra: {
     apiUrl: process.env.API_URL ?? "https://nowgo-production.up.railway.app",
