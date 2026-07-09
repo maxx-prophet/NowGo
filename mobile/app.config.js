@@ -17,6 +17,7 @@ export default ({ config }) => ({
   ios: {
     supportsTablet: false,
     bundleIdentifier: "com.nowgo.app",
+    buildNumber: "1",
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
     },
@@ -31,11 +32,21 @@ export default ({ config }) => ({
   web: {
     favicon: "./assets/favicon.png",
   },
-  plugins: ["expo-localization"],
+  plugins: [
+    "expo-localization",
+    [
+      "expo-location",
+      {
+        locationWhenInUsePermission:
+          "NowGo uses your location to show events near you and estimate your travel time.",
+      },
+    ],
+  ],
   extra: {
     apiUrl: process.env.API_URL ?? "https://nowgo-production.up.railway.app",
     appEnv: process.env.APP_ENV ?? "production",
     postHogKey: process.env.POSTHOG_KEY ?? "",
+    posthogHost: process.env.POSTHOG_HOST ?? "https://us.i.posthog.com",
     eas: {
       projectId: "9776acca-9db0-4dab-a3e3-1d2eb6192538",
     },
