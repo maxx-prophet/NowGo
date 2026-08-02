@@ -3,6 +3,7 @@ import { fetchTicketmaster } from "./fetchers/ticketmaster.js";
 import { fetchSeatGeek } from "./fetchers/seatgeek.js";
 import { fetchJazzNYC } from "./fetchers/jazz-nyc.js";
 import { ingestEvents } from "../db/ingest.js";
+import { geocodeVenues } from "./services/geocode.js";
 import { runAvailabilityCheck } from "./services/availability.js";
 import { runGenreEnrichment } from "./services/genre-enrichment.js";
 import { runSurpriseScore } from "./services/surprise-score.js";
@@ -48,6 +49,15 @@ export async function runPipeline() {
 
     const { ok, skipped } = await ingestEvents(allEvents);
     console.log(`  💾 Ingested ${ok} events, skipped ${skipped}`);
+
+    // Must run after ingest so new venue rows exist. Isolated in its own
+    // try/catch: geocoding depends on an external API and its own quota, and a
+    // failure here must not skip the enrichment steps below.
+    try {
+      await geocodeVenues();
+    } catch (err) {
+      console.error(`  ❌ Geocoding failed (continuing): ${err.message}`);
+    }
 
     await runVenueEmbeddings();
     console.log(`  🔢 Venue embeddings complete`);
