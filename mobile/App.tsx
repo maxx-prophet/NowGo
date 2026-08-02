@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -6,8 +6,8 @@ import { StatusBar } from "expo-status-bar";
 import Constants from "expo-constants";
 import { PostHogProvider } from "posthog-react-native";
 import { PreferencesProvider, usePreferencesContext } from "./src/contexts/PreferencesContext";
-
-const POST_HOG_KEY: string = Constants.expoConfig?.extra?.postHogKey ?? "";
+import { posthog } from "./src/config/posthog";
+import ErrorBoundary from "./src/components/ErrorBoundary";
 import TonightFeed from "./src/screens/TonightFeed";
 import EventDetail from "./src/screens/EventDetail";
 import FiltersModal from "./src/screens/FiltersModal";
@@ -16,8 +16,10 @@ import IdentityScreen from "./src/screens/onboarding/IdentityScreen";
 import VibeScreen from "./src/screens/onboarding/VibeScreen";
 import BudgetScreen from "./src/screens/onboarding/BudgetScreen";
 import ReadyScreen from "./src/screens/onboarding/ReadyScreen";
+import type { RootStackParamList, OnboardingStackParamList } from "./src/types";
 
-const Stack = createNativeStackNavigator();
+const AppStack = createNativeStackNavigator<RootStackParamList>();
+const OnboardingStack = createNativeStackNavigator<OnboardingStackParamList>();
 const appEnv: string = Constants.expoConfig?.extra?.appEnv ?? "production";
 
 function EnvBadge() {
@@ -44,28 +46,43 @@ const appStackOpts = {
 };
 
 function AppContent() {
-const { preferences, loading } = usePreferencesContext();
+  const { preferences, loading } = usePreferencesContext();
+  const navigationRef = useRef<any>(null);
+  const routeNameRef = useRef<string | undefined>(undefined);
 
   if (loading) return null;
 
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      ref={navigationRef}
+      onReady={() => {
+        routeNameRef.current = navigationRef.current?.getCurrentRoute()?.name;
+      }}
+      onStateChange={() => {
+        const previous = routeNameRef.current;
+        const current = navigationRef.current?.getCurrentRoute()?.name;
+        if (current && previous !== current) {
+          posthog.screen(current);
+          routeNameRef.current = current;
+        }
+      }}
+    >
       <StatusBar style="light" />
       <EnvBadge />
       {preferences.onboardingComplete ? (
-        <Stack.Navigator screenOptions={appStackOpts}>
-          <Stack.Screen name="TonightFeed" component={TonightFeed} options={{ title: "Tonight in NYC" }} />
-          <Stack.Screen name="EventDetail" component={EventDetail as React.ComponentType<any>} options={{ title: "Event" }} />
-          <Stack.Screen name="Filters" component={FiltersModal as React.ComponentType<any>} options={{ presentation: "modal", title: "Filters" }} />
-        </Stack.Navigator>
+        <AppStack.Navigator screenOptions={appStackOpts}>
+          <AppStack.Screen name="TonightFeed" component={TonightFeed} options={{ title: "Tonight in NYC" }} />
+          <AppStack.Screen name="EventDetail" component={EventDetail} options={{ title: "Event" }} />
+          <AppStack.Screen name="Filters" component={FiltersModal} options={{ presentation: "modal", title: "Filters" }} />
+        </AppStack.Navigator>
       ) : (
-        <Stack.Navigator screenOptions={stackOpts}>
-          <Stack.Screen name="Welcome" component={WelcomeScreen} />
-          <Stack.Screen name="Identity" component={IdentityScreen} />
-          <Stack.Screen name="Vibe" component={VibeScreen} />
-          <Stack.Screen name="Budget" component={BudgetScreen} />
-          <Stack.Screen name="Ready" component={ReadyScreen} />
-        </Stack.Navigator>
+        <OnboardingStack.Navigator screenOptions={stackOpts}>
+          <OnboardingStack.Screen name="Welcome" component={WelcomeScreen} />
+          <OnboardingStack.Screen name="Identity" component={IdentityScreen} />
+          <OnboardingStack.Screen name="Vibe" component={VibeScreen} />
+          <OnboardingStack.Screen name="Budget" component={BudgetScreen} />
+          <OnboardingStack.Screen name="Ready" component={ReadyScreen} />
+        </OnboardingStack.Navigator>
       )}
     </NavigationContainer>
   );
@@ -73,9 +90,14 @@ const { preferences, loading } = usePreferencesContext();
 
 export default function App() {
   return (
-    <PostHogProvider apiKey={POST_HOG_KEY} options={{ host: "https://us.i.posthog.com" }}>
+    <PostHogProvider
+      client={posthog}
+      autocapture={{ captureScreens: false, captureTouches: true }}
+    >
       <PreferencesProvider>
-        <AppContent />
+        <ErrorBoundary>
+          <AppContent />
+        </ErrorBoundary>
       </PreferencesProvider>
     </PostHogProvider>
   );

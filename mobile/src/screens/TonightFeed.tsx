@@ -1,15 +1,16 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   View, Text, FlatList, TouchableOpacity,
-  ActivityIndicator, StyleSheet, RefreshControl, Modal, Switch,
+  ActivityIndicator, StyleSheet, RefreshControl, Linking,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import * as Location from "expo-location";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import EventCard from "../components/EventCard";
+import FilterSheet from "../components/FilterSheet";
+import SurpriseSheet from "../components/SurpriseSheet";
 import { fetchTonightEvents } from "../api/nowgo";
-import type { Event } from "../types";
+import type { Event, AppNavProp } from "../types";
 import { useAnalytics } from "../services/analytics";
+import { useLocation } from "../hooks/useLocation";
 
 const CATEGORIES = [
   "All", "Jazz", "Music", "Comedy", "Theatre",
@@ -31,15 +32,8 @@ const MODES = [
 ];
 const MODE_EMOJI: Record<string, string> = { transit: "🚇", walk: "🚶", drive: "🚗" };
 
-const SORT_OPTIONS = [
-  { key: "best" as const,     label: "Best Match" },
-  { key: "soonest" as const,  label: "Soonest" },
-  { key: "nearest" as const,  label: "Nearest" },
-  { key: "cheapest" as const, label: "Cheapest" },
-];
-
 interface Props {
-  navigation: NativeStackNavigationProp<any>;
+  navigation: AppNavProp<"TonightFeed">;
 }
 
 export default function TonightFeed({ navigation }: Props) {
@@ -47,34 +41,21 @@ export default function TonightFeed({ navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
+  const { coords, permissionStatus } = useLocation();
 
   const [category, setCategory] = useState("All");
   const [budgetMax, setBudgetMax] = useState<number | null | undefined>(undefined);
   const [mode, setMode] = useState<"transit" | "walk" | "drive">("transit");
   const [sortBy, setSortBy] = useState<"best" | "soonest" | "nearest" | "cheapest">("best");
   const [walkInsOnly, setWalkInsOnly] = useState(false);
-  const [draftSortBy, setDraftSortBy] = useState<"best" | "soonest" | "nearest" | "cheapest">("best");
-  const [draftWalkInsOnly, setDraftWalkInsOnly] = useState(false);
 
   const [modePickerOpen, setModePickerOpen] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const analytics = useAnalytics();
 
   const [surpriseEvents, setSurpriseEvents] = useState<Event[]>([]);
-  const [surpriseIndex, setSurpriseIndex] = useState(0);
   const [surpriseOpen, setSurpriseOpen] = useState(false);
   const [surpriseLoading, setSurpriseLoading] = useState(false);
-
-  useEffect(() => {
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === "granted") {
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        setLocation(loc.coords);
-      }
-    })();
-  }, []);
 
   const load = useCallback(async (isRefresh = false) => {
     try {
@@ -86,8 +67,8 @@ export default function TonightFeed({ navigation }: Props) {
       }
       setError(null);
       const data = await fetchTonightEvents({
-        lat: location?.latitude,
-        lng: location?.longitude,
+        lat: coords?.latitude,
+        lng: coords?.longitude,
         mode,
         segment: category,
         budgetMax,
@@ -99,29 +80,27 @@ export default function TonightFeed({ navigation }: Props) {
       analytics.feedLoaded(loaded.length, category);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
+      analytics.captureError(err instanceof Error ? err : new Error(String(err)), { segment: category });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [location, category, mode, budgetMax, sortBy, walkInsOnly]);
+  }, [coords, category, mode, budgetMax, sortBy, walkInsOnly]);
 
   function clearFilters() {
     setCategory("All");
     setBudgetMax(undefined);
     setWalkInsOnly(false);
     setSortBy("best");
-    setDraftSortBy("best");
-    setDraftWalkInsOnly(false);
   }
 
   async function loadSurprise() {
     setSurpriseLoading(true);
     setSurpriseOpen(true);
-    setSurpriseIndex(0);
     try {
       const data = await fetchTonightEvents({
-        lat: location?.latitude,
-        lng: location?.longitude,
+        lat: coords?.latitude,
+        lng: coords?.longitude,
         mode,
         surpriseMe: true,
       });
@@ -134,13 +113,6 @@ export default function TonightFeed({ navigation }: Props) {
   }
 
   const isFiltered = category !== "All" || budgetMax !== undefined || walkInsOnly;
-
-  useEffect(() => {
-    if (filterSheetOpen) {
-      setDraftSortBy(sortBy);
-      setDraftWalkInsOnly(walkInsOnly);
-    }
-  }, [filterSheetOpen]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -190,7 +162,7 @@ export default function TonightFeed({ navigation }: Props) {
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={[styles.budgetChip, budgetMax === item.value && styles.budgetChipActive]}
-                onPress={() => setBudgetMax(item.value)}
+                onPress={() => { setBudgetMax(item.value); analytics.budgetFilterApplied(item.value); }}
               >
                 <Text style={[styles.budgetChipText, budgetMax === item.value && styles.budgetChipTextActive]}>
                   {item.label}
@@ -235,7 +207,7 @@ export default function TonightFeed({ navigation }: Props) {
           {/* Filter button */}
           <TouchableOpacity
             style={styles.filterButton}
-            onPress={() => setFilterSheetOpen(true)}
+            onPress={() => { setFilterSheetOpen(true); analytics.filterSheetOpened(); }}
           >
             <View style={styles.filterIconWrap}>
               <View style={[styles.filterLine, { width: 14 }]} />
@@ -250,6 +222,18 @@ export default function TonightFeed({ navigation }: Props) {
       <TouchableOpacity style={styles.surpriseBtn} onPress={() => { loadSurprise(); analytics.surpriseMeTapped(); }}>
         <Text style={styles.surpriseBtnText}>🎲  Surprise Me</Text>
       </TouchableOpacity>
+
+      {/* Location permission nudge — shown only when denied */}
+      {permissionStatus === "denied" && (
+        <TouchableOpacity
+          style={styles.locationNudge}
+          onPress={() => Linking.openURL("app-settings:")}
+        >
+          <Text style={styles.locationNudgeText}>
+            📍 Enable location for nearby events
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {/* Events list */}
       <FlatList
@@ -291,7 +275,7 @@ export default function TonightFeed({ navigation }: Props) {
               ellipsizeMode="tail"
             >
               {events.length} events tonight
-              {location ? " · near you" : " · NYC"}
+              {coords ? " · near you" : " · NYC"}
             </Text>
           ) : null
         }
@@ -303,8 +287,8 @@ export default function TonightFeed({ navigation }: Props) {
               analytics.eventTapped(item.event_id, item.name, item.segment);
               navigation.navigate("EventDetail", {
                 event: item,
-                userLat: location?.latitude ?? null,
-                userLng: location?.longitude ?? null,
+                userLat: coords?.latitude ?? null,
+                userLng: coords?.longitude ?? null,
                 initialMode: mode,
               });
             }}
@@ -321,120 +305,31 @@ export default function TonightFeed({ navigation }: Props) {
         />
       )}
 
-      {/* Filter bottom sheet */}
-      <Modal
+      <FilterSheet
         visible={filterSheetOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setFilterSheetOpen(false)}
-      >
-        <View style={styles.sheetBackdrop}>
-          <TouchableOpacity
-            style={StyleSheet.absoluteFillObject}
-            onPress={() => setFilterSheetOpen(false)}
-            activeOpacity={1}
-          />
-          <View style={styles.sheet}>
-            {/* Sort By */}
-            <Text style={styles.sheetHeading}>Sort By</Text>
-            <View style={styles.sortGrid}>
-              {SORT_OPTIONS.map((opt) => (
-                <TouchableOpacity
-                  key={opt.key}
-                  style={[styles.sortOption, draftSortBy === opt.key && styles.sortOptionActive]}
-                  onPress={() => setDraftSortBy(opt.key)}
-                >
-                  <Text style={[styles.sortOptionText, draftSortBy === opt.key && styles.sortOptionTextActive]}>
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+        sortBy={sortBy}
+        walkInsOnly={walkInsOnly}
+        onApply={(newSort, newWalkIns) => {
+          setSortBy(newSort);
+          setWalkInsOnly(newWalkIns);
+        }}
+        onClose={() => setFilterSheetOpen(false)}
+      />
 
-            {/* Availability */}
-            <Text style={styles.sheetHeading}>Availability</Text>
-            <View style={styles.toggleRow}>
-              <View>
-                <Text style={styles.toggleLabel}>Walk-ins only</Text>
-                <Text style={styles.toggleSub}>No ticket required</Text>
-              </View>
-              <Switch
-                value={draftWalkInsOnly}
-                onValueChange={setDraftWalkInsOnly}
-                trackColor={{ false: "#2A2A2A", true: "#FF6B35" }}
-                thumbColor="#FFFFFF"
-                ios_backgroundColor="#2A2A2A"
-              />
-            </View>
-
-            {/* CTA */}
-            <TouchableOpacity
-              style={styles.showResultsBtn}
-              onPress={() => {
-                setSortBy(draftSortBy);
-                setWalkInsOnly(draftWalkInsOnly);
-                setFilterSheetOpen(false);
-              }}
-            >
-              <Text style={styles.showResultsText}>Show results</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Surprise Me modal */}
-      <Modal
+      <SurpriseSheet
         visible={surpriseOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setSurpriseOpen(false)}
-      >
-        <View style={styles.sheetBackdrop}>
-          <TouchableOpacity
-            style={StyleSheet.absoluteFillObject}
-            onPress={() => setSurpriseOpen(false)}
-            activeOpacity={1}
-          />
-          <View style={styles.sheet}>
-            <Text style={styles.sheetHeading}>🎲 Tonight's Pick</Text>
-
-            {surpriseLoading ? (
-              <ActivityIndicator color="#FF6B35" size="large" style={{ marginVertical: 32 }} />
-            ) : surpriseEvents.length === 0 ? (
-              <Text style={styles.surpriseEmpty}>
-                No events in the next 90 min that are confirmed available. Check back soon!
-              </Text>
-            ) : (
-              <>
-                <EventCard
-                  event={surpriseEvents[surpriseIndex]}
-                  index={0}
-                  onPress={() => {
-                    setSurpriseOpen(false);
-                    navigation.navigate("EventDetail", {
-                      event: surpriseEvents[surpriseIndex],
-                      userLat: location?.latitude ?? null,
-                      userLng: location?.longitude ?? null,
-                      initialMode: mode,
-                    });
-                  }}
-                />
-
-                <View style={styles.surpriseNav}>
-                  <Text style={styles.surpriseCount}>
-                    {surpriseIndex + 1} of {surpriseEvents.length}
-                  </Text>
-                  {surpriseIndex < surpriseEvents.length - 1 && (
-                    <TouchableOpacity onPress={() => setSurpriseIndex(i => i + 1)}>
-                      <Text style={styles.surpriseNext}>Try another →</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
+        events={surpriseEvents}
+        loading={surpriseLoading}
+        onClose={() => setSurpriseOpen(false)}
+        onNavigate={(event) => {
+          navigation.navigate("EventDetail", {
+            event,
+            userLat: coords?.latitude ?? null,
+            userLng: coords?.longitude ?? null,
+            initialMode: mode,
+          });
+        }}
+      />
     </View>
   );
 }
@@ -582,60 +477,6 @@ const styles = StyleSheet.create({
     borderColor: "#2A2A2A",
   },
   clearBtnText: { color: "#FF6B35", fontWeight: "600", fontSize: 14 },
-  sheetBackdrop: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.6)",
-  },
-  sheet: {
-    backgroundColor: "#111111",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-    paddingBottom: 40,
-  },
-  sheetHeading: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  sortGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginBottom: 20,
-  },
-  sortOption: {
-    width: "47%",
-    paddingVertical: 12,
-    alignItems: "center",
-    borderRadius: 10,
-    backgroundColor: "#1A1A1A",
-    borderWidth: 1.5,
-    borderColor: "#2A2A2A",
-  },
-  sortOptionActive: { backgroundColor: "#F5A623", borderColor: "#F5A623" },
-  sortOptionText: { color: "#9CA3AF", fontSize: 14, fontWeight: "500" },
-  sortOptionTextActive: { color: "#111111", fontWeight: "700" },
-  toggleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 28,
-  },
-  toggleLabel: { color: "#FFFFFF", fontSize: 15, fontWeight: "500" },
-  toggleSub: { color: "#6B7280", fontSize: 13, marginTop: 2 },
-  showResultsBtn: {
-    backgroundColor: "#FF6B35",
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  showResultsText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
   surpriseBtn: {
     marginHorizontal: 16,
     marginBottom: 10,
@@ -652,27 +493,21 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.3,
   },
-  surpriseEmpty: {
-    color: "#6B7280",
-    fontSize: 14,
-    textAlign: "center",
-    paddingVertical: 24,
-    lineHeight: 22,
-  },
-  surpriseNav: {
+  locationNudge: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    backgroundColor: "#1A1A1A",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 12,
-    paddingHorizontal: 4,
   },
-  surpriseCount: {
-    color: "#4B5563",
+  locationNudgeText: {
+    color: "#9CA3AF",
     fontSize: 13,
-  },
-  surpriseNext: {
-    color: "#FF6B35",
-    fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "500",
   },
 });

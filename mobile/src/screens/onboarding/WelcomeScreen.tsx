@@ -1,7 +1,11 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { usePostHog } from "posthog-react-native";
+import type { OnboardingNavProp } from "../../types";
 
-export default function WelcomeScreen({ navigation }: { navigation: any }) {
+export default function WelcomeScreen({ navigation }: { navigation: OnboardingNavProp<"Welcome"> }) {
+  const posthog = usePostHog();
+
   return (
     <View style={styles.container}>
       <View>
@@ -23,7 +27,7 @@ export default function WelcomeScreen({ navigation }: { navigation: any }) {
       <View>
         <TouchableOpacity
           style={styles.btn}
-          onPress={() => navigation.navigate("Identity")}
+          onPress={() => { posthog?.capture("onboarding_started"); navigation.navigate("Identity"); }}
         >
           <Text style={styles.btnText}>Get started →</Text>
         </TouchableOpacity>

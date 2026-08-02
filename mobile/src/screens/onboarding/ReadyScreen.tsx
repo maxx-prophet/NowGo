@@ -1,6 +1,9 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { usePreferencesContext } from "../../contexts/PreferencesContext";
+import { usePostHog } from "posthog-react-native";
+import BackButton from "../../components/BackButton";
+import type { OnboardingNavProp } from "../../types";
 
 const IDENTITY_LABELS: Record<string, string> = {
   local: "Born & bred local",
@@ -14,10 +17,26 @@ function budgetLabel(max: number | null): string {
   return `Up to $${max}`;
 }
 
-export default function ReadyScreen({ navigation }: { navigation: any }) {
+export default function ReadyScreen({ navigation }: { navigation: OnboardingNavProp<"Ready"> }) {
   const { preferences, completeOnboarding, savePreferences } = usePreferencesContext();
+  const posthog = usePostHog();
 
   async function onFinish() {
+    posthog?.capture("onboarding_completed", {
+      identity: preferences.identity,
+      vibes: preferences.vibes,
+      vibe_count: preferences.vibes.length,
+      budget_max: preferences.budgetMax,
+    });
+    const distinctId = posthog?.getDistinctId();
+    posthog?.identify(distinctId ?? "anonymous", {
+      $set: {
+        identity: preferences.identity,
+        vibes: preferences.vibes,
+        budget_max: preferences.budgetMax,
+      },
+      $set_once: { onboarding_completed_at: new Date().toISOString() },
+    });
     await completeOnboarding({
       identity: preferences.identity,
       vibes: preferences.vibes,
@@ -32,6 +51,7 @@ export default function ReadyScreen({ navigation }: { navigation: any }) {
   return (
     <View style={styles.container}>
       <View>
+        <BackButton onPress={onBack} />
         <View style={styles.card}>
           <View style={styles.row}>
             <Text style={styles.key}>YOU ARE</Text>

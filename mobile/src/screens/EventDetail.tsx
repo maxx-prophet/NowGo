@@ -1,26 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Linking, StyleSheet, ActivityIndicator } from "react-native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import type { RouteProp } from "@react-navigation/native";
-import type { Event } from "../types";
+import type { AppNavProp, AppRouteProp, TravelMode } from "../types";
 import { fetchTravel } from "../api/nowgo";
 import { getAvailabilityBadge } from "../components/eventCardHelpers";
 import { useAnalytics } from "../services/analytics";
 
-type TravelMode = "transit" | "walk" | "drive";
-
-type ParamList = {
-  EventDetail: {
-    event: Event;
-    userLat?: number | null;
-    userLng?: number | null;
-    initialMode?: TravelMode;
-  };
-};
-
 interface Props {
-  route: RouteProp<ParamList, "EventDetail">;
-  navigation: NativeStackNavigationProp<any>;
+  route: AppRouteProp<"EventDetail">;
+  navigation: AppNavProp<"EventDetail">;
 }
 
 const MODES: { key: TravelMode; emoji: string; label: string }[] = [
@@ -96,6 +83,7 @@ export default function EventDetail({ route }: Props) {
     if (newMode === mode || !hasGeo) return;
     setMode(newMode);
     setTravelLoading(true);
+    analytics.travelModeChanged(event.event_id, newMode);
     try {
       const result = await fetchTravel({
         fromLat: userLat!, fromLng: userLng!,
@@ -106,8 +94,8 @@ export default function EventDetail({ route }: Props) {
       setDistanceKm(result.distance_km);
       setLeaveBy(result.leave_by);
       setTravelSource(result.travel_source);
-    } catch {
-      // keep previous values on error
+    } catch (err) {
+      analytics.captureError(err instanceof Error ? err : new Error(String(err)));
     } finally {
       setTravelLoading(false);
     }

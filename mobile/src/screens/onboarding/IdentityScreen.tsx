@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { usePreferencesContext } from "../../contexts/PreferencesContext";
-import type { UserIdentity } from "../../types";
+import { usePostHog } from "posthog-react-native";
+import BackButton from "../../components/BackButton";
+import type { UserIdentity, OnboardingNavProp } from "../../types";
 
 const CHOICES: { value: UserIdentity; emoji: string; title: string; desc: string }[] = [
   { value: "local", emoji: "🗽", title: "Born & bred local", desc: "I know the city — show me what I'm missing" },
@@ -9,18 +11,21 @@ const CHOICES: { value: UserIdentity; emoji: string; title: string; desc: string
   { value: "visitor", emoji: "✈️", title: "Just visiting", desc: "In town for a bit — show me the best of it" },
 ];
 
-export default function IdentityScreen({ navigation }: { navigation: any }) {
+export default function IdentityScreen({ navigation }: { navigation: OnboardingNavProp<"Identity"> }) {
   const { preferences, savePreferences } = usePreferencesContext();
+  const posthog = usePostHog();
   const [selected, setSelected] = useState<UserIdentity>(preferences.identity);
 
   async function onContinue() {
     await savePreferences({ identity: selected });
+    posthog?.capture("onboarding_identity_selected", { identity: selected });
     navigation.navigate("Vibe");
   }
 
   return (
     <View style={styles.container}>
       <View>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.stepLabel}>STEP 2 OF 5</Text>
         <Text style={styles.headline}>Are you a New{"\n"}Yorker?</Text>
         <View style={{ height: 8 }} />

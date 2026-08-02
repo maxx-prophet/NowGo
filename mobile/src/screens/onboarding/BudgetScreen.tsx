@@ -1,6 +1,9 @@
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useRef, useState } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, PanResponder, GestureResponderEvent } from "react-native";
 import { usePreferencesContext } from "../../contexts/PreferencesContext";
+import { usePostHog } from "posthog-react-native";
+import BackButton from "../../components/BackButton";
+import type { OnboardingNavProp } from "../../types";
 
 const SNAPS: { label: string; value: number | null; sub: string }[] = [
   { label: "Free", value: 0, sub: "No tickets, no problem" },
@@ -10,25 +13,48 @@ const SNAPS: { label: string; value: number | null; sub: string }[] = [
   { label: "$500+", value: null, sub: "No limit" },
 ];
 
-export default function BudgetScreen({ navigation }: { navigation: any }) {
+export default function BudgetScreen({ navigation }: { navigation: OnboardingNavProp<"Budget"> }) {
   const { preferences, savePreferences } = usePreferencesContext();
+  const posthog = usePostHog();
   const [budget, setBudget] = useState<number | null>(preferences.budgetMax);
+  const trackWidthRef = useRef(0);
 
   const snapIndex = SNAPS.findIndex((s) => s.value === budget);
   const activeSnap = SNAPS[snapIndex] ?? SNAPS[1];
   const fillPercent = snapIndex <= 0 ? 0 : (snapIndex / (SNAPS.length - 1)) * 100;
 
+  function setBudgetFromTouch(x: number) {
+    const width = trackWidthRef.current;
+    if (width <= 0) return;
+    const ratio = Math.max(0, Math.min(1, x / width));
+    const index = Math.round(ratio * (SNAPS.length - 1));
+    setBudget(SNAPS[index].value);
+  }
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (evt: GestureResponderEvent) =>
+        setBudgetFromTouch(evt.nativeEvent.locationX),
+      onPanResponderMove: (evt: GestureResponderEvent) =>
+        setBudgetFromTouch(evt.nativeEvent.locationX),
+    })
+  ).current;
+
   async function onContinue() {
     await savePreferences({ budgetMax: budget });
+    posthog?.capture("onboarding_budget_set", { budget_max: budget });
     navigation.navigate("Ready");
   }
 
   return (
     <View style={styles.container}>
       <View>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.stepLabel}>STEP 4 OF 5</Text>
         <Text style={styles.headline}>What's your{"\n"}budget tonight?</Text>
-        <Text style={styles.sub}>Tap to set your max spend.</Text>
+        <Text style={styles.sub}>Drag the slider or tap to set your max spend.</Text>
 
         <View style={styles.priceDisplay}>
           <Text style={styles.priceLabel}>UP TO</Text>
@@ -39,9 +65,15 @@ export default function BudgetScreen({ navigation }: { navigation: any }) {
         </View>
 
         <View style={styles.sliderContainer}>
-          <View style={styles.track}>
-            <View style={[styles.fill, { width: `${fillPercent}%` as any }]} />
-            <View style={[styles.thumb, { left: `${fillPercent}%` as any }]} />
+          <View
+            style={styles.touchArea}
+            onLayout={(e) => { trackWidthRef.current = e.nativeEvent.layout.width; }}
+            {...panResponder.panHandlers}
+          >
+            <View style={styles.track}>
+              <View style={[styles.fill, { width: `${fillPercent}%` as any }]} />
+              <View style={[styles.thumb, { left: `${fillPercent}%` as any }]} />
+            </View>
           </View>
           <View style={styles.ticks}>
             {SNAPS.map((s) => (
@@ -123,6 +155,10 @@ const styles = StyleSheet.create({
   },
   priceSub: { fontSize: 14, color: "#6B7280", marginTop: 8 },
   sliderContainer: { marginTop: 44 },
+  touchArea: {
+    paddingVertical: 20,
+    justifyContent: "center",
+  },
   track: {
     height: 6,
     backgroundColor: "#2A2A2A",

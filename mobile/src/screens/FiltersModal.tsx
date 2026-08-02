@@ -1,13 +1,10 @@
 import { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import type { RouteProp } from "@react-navigation/native";
-
-type ParamList = { Filters: { mode: "transit" | "walk" | "drive"; onApply: (mode: "transit" | "walk" | "drive") => void } };
+import type { AppNavProp, AppRouteProp } from "../types";
 
 interface Props {
-  route: RouteProp<ParamList, "Filters">;
-  navigation: NativeStackNavigationProp<any>;
+  route: AppRouteProp<"Filters">;
+  navigation: AppNavProp<"Filters">;
 }
 
 const MODES: Array<{ key: "transit" | "walk" | "drive"; label: string; desc: string }> = [

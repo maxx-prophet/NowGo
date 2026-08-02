@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import { usePreferencesContext } from "../../contexts/PreferencesContext";
+import { usePostHog } from "posthog-react-native";
+import BackButton from "../../components/BackButton";
+import type { OnboardingNavProp } from "../../types";
 
 const VIBES = [
   { label: "Jazz", emoji: "🎷" },
@@ -15,8 +18,9 @@ const VIBES = [
   { label: "Family", emoji: "👨‍👩‍👧" },
 ];
 
-export default function VibeScreen({ navigation }: { navigation: any }) {
+export default function VibeScreen({ navigation }: { navigation: OnboardingNavProp<"Vibe"> }) {
   const { preferences, savePreferences } = usePreferencesContext();
+  const posthog = usePostHog();
   const [selected, setSelected] = useState<string[]>(preferences.vibes);
 
   function toggle(label: string) {
@@ -27,12 +31,17 @@ export default function VibeScreen({ navigation }: { navigation: any }) {
 
   async function onContinue() {
     await savePreferences({ vibes: selected });
+    posthog?.capture("onboarding_vibes_selected", {
+      vibes: selected,
+      vibe_count: selected.length,
+    });
     navigation.navigate("Budget");
   }
 
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.stepLabel}>STEP 3 OF 5</Text>
         <Text style={styles.headline}>What's your{"\n"}vibe?</Text>
         <Text style={styles.sub}>Pick as many as you like.</Text>
