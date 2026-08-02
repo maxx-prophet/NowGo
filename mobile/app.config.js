@@ -17,7 +17,6 @@ export default ({ config }) => ({
   ios: {
     supportsTablet: false,
     bundleIdentifier: "com.nowgo.app",
-    buildNumber: "1",
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
     },

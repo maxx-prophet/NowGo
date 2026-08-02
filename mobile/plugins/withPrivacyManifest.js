@@ -1,7 +1,9 @@
 // plugins/withPrivacyManifest.js
-const { withDangerousMod } = require("@expo/config-plugins");
-const path = require("path");
-const fs = require("fs");
+import ConfigPlugins from "@expo/config-plugins";
+import path from "path";
+import fs from "fs";
+
+const { withDangerousMod } = ConfigPlugins;
 
 // Apple requires a privacy manifest for apps that use location or third-party
 // analytics SDKs (PostHog). This plugin writes PrivacyInfo.xcprivacy into the
@@ -50,7 +52,7 @@ const PRIVACY_MANIFEST = `<?xml version="1.0" encoding="UTF-8"?>
 </dict>
 </plist>`;
 
-module.exports = function withPrivacyManifest(config) {
+export default function withPrivacyManifest(config) {
   return withDangerousMod(config, [
     "ios",
     (config) => {
