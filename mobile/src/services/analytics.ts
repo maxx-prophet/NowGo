@@ -25,5 +25,20 @@ export function useAnalytics() {
 
     budgetFilterApplied: (budgetMax: number | null) =>
       posthog?.capture("budget_filter_applied", { budget_max: budgetMax }),
+
+    filterSheetOpened: () =>
+      posthog?.capture("filter_sheet_opened"),
+
+    sortChanged: (sortBy: string) =>
+      posthog?.capture("sort_changed", { sort_by: sortBy }),
+
+    walkInsFilterToggled: (enabled: boolean) =>
+      posthog?.capture("walk_ins_filter_toggled", { enabled }),
+
+    travelModeChanged: (eventId: string, mode: string) =>
+      posthog?.capture("travel_mode_changed", { event_id: eventId, mode }),
+
+    captureError: (error: Error, context?: Record<string, string | number | boolean | null>) =>
+      posthog?.captureException(error, context),
   };
 }
