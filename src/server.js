@@ -9,6 +9,14 @@ dotenv.config({ path: ".env.nowgo" });
 const app = express();
 const PORT = process.env.PORT ?? 3000;
 
+// The jazz-nyc source is a scraped schedule table with no per-event links, so
+// every event it produces carries this same homepage URL. Where we have
+// resolved the venue's own site (see services/geocode.js) we serve that
+// instead, which for the jazz clubs is usually where tickets are actually
+// sold — Smalls and Mezzrow both resolve to smallslive.com.
+const GENERIC_EVENT_URL = "https://www.jazz-nyc.com";
+const EVENT_URL_SQL = `COALESCE(NULLIF(e.url, '${GENERIC_EVENT_URL}'), v.website, e.url)`;
+
 app.use(express.json());
 
 // ─── HEALTH ──────────────────────────────────────────────────────────────────
@@ -73,7 +81,8 @@ app.get("/events/tonight", async (req, res) => {
     if (hasGeo) {
       query = `
         SELECT
-          e.event_id, e.source, e.name, e.start_time, e.url,
+          e.event_id, e.source, e.name, e.start_time,
+          ${EVENT_URL_SQL} AS url,
           e.segment, e.genre, e.price_min, e.price_max, e.is_free,
           e.availability_tier, e.last_checked_at, e.surprise_score,
           e.walk_in, e.hook,
@@ -100,7 +109,8 @@ app.get("/events/tonight", async (req, res) => {
     } else {
       query = `
         SELECT
-          e.event_id, e.source, e.name, e.start_time, e.url,
+          e.event_id, e.source, e.name, e.start_time,
+          ${EVENT_URL_SQL} AS url,
           e.segment, e.genre, e.price_min, e.price_max, e.is_free,
           e.availability_tier, e.last_checked_at, e.surprise_score,
           e.walk_in, e.hook,
@@ -167,6 +177,8 @@ app.get("/events/:id", async (req, res) => {
     const { rows } = await pool.query(
       `SELECT
          e.*,
+         -- listed after e.* so it overrides the raw e.url in the result row
+         ${EVENT_URL_SQL} AS url,
          v.name        AS venue_name,
          v.address     AS venue_address,
          v.neighborhood,

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isWithinNYC, extractPlace } from "./geocode.js";
+import { isWithinNYC, extractPlace, isUsableVenueWebsite, extractWebsite } from "./geocode.js";
 
 const makePayload = (lat, lng, overrides = {}) => ({
   status: "OK",
@@ -48,6 +48,7 @@ test("extractPlace returns coords and address for an NYC result", () => {
     lat: 40.7346,
     lng: -74.001924,
     address: "163 W 10th St, New York, NY 10014, USA",
+    placeId: null,
   });
 });
 
@@ -95,4 +96,56 @@ test("extractPlace throws on OVER_QUERY_LIMIT rather than silently skipping", ()
     () => extractPlace({ status: "OVER_QUERY_LIMIT" }, "Smalls"),
     /OVER_QUERY_LIMIT/
   );
+});
+
+test("extractPlace returns the place_id needed for a details lookup", () => {
+  const payload = makePayload(40.7346, -74.001924);
+  payload.results[0].place_id = "ChIJabc123";
+  assert.equal(extractPlace(payload, "Mezzrow").placeId, "ChIJabc123");
+});
+
+// ─── venue website filtering ─────────────────────────────────────────────────
+
+test("isUsableVenueWebsite accepts a real venue site", () => {
+  assert.equal(isUsableVenueWebsite("https://www.smallslive.com/"), true);
+  assert.equal(isUsableVenueWebsite("http://www.thedjangonyc.com/"), true);
+});
+
+test("isUsableVenueWebsite rejects social and aggregator pages", () => {
+  // These are worse than the generic fallback as a "buy tickets" destination.
+  assert.equal(isUsableVenueWebsite("https://www.facebook.com/somevenue"), false);
+  assert.equal(isUsableVenueWebsite("https://instagram.com/somevenue"), false);
+  assert.equal(isUsableVenueWebsite("https://www.yelp.com/biz/somevenue"), false);
+  assert.equal(isUsableVenueWebsite("https://linktr.ee/somevenue"), false);
+});
+
+test("isUsableVenueWebsite rejects subdomains of blocked hosts", () => {
+  assert.equal(isUsableVenueWebsite("https://business.facebook.com/venue"), false);
+});
+
+test("isUsableVenueWebsite does not reject a venue whose name merely contains a blocked host", () => {
+  assert.equal(isUsableVenueWebsite("https://notfacebook.com/venue"), true);
+});
+
+test("isUsableVenueWebsite rejects empty and malformed values", () => {
+  assert.equal(isUsableVenueWebsite(""), false);
+  assert.equal(isUsableVenueWebsite("   "), false);
+  assert.equal(isUsableVenueWebsite(null), false);
+  assert.equal(isUsableVenueWebsite(undefined), false);
+  assert.equal(isUsableVenueWebsite("not a url"), false);
+});
+
+test("extractWebsite pulls the website out of a details payload", () => {
+  const payload = { result: { website: "https://www.smallslive.com/" } };
+  assert.equal(extractWebsite(payload), "https://www.smallslive.com/");
+});
+
+test("extractWebsite returns null when the venue has no website", () => {
+  assert.equal(extractWebsite({ result: {} }), null);
+  assert.equal(extractWebsite({}), null);
+  assert.equal(extractWebsite(null), null);
+});
+
+test("extractWebsite returns null for a social-only listing", () => {
+  assert.equal(extractWebsite({ result: { website: "https://facebook.com/v" } }), null);
 });

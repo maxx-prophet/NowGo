@@ -3,7 +3,7 @@ import { fetchTicketmaster } from "./fetchers/ticketmaster.js";
 import { fetchSeatGeek } from "./fetchers/seatgeek.js";
 import { fetchJazzNYC } from "./fetchers/jazz-nyc.js";
 import { ingestEvents } from "../db/ingest.js";
-import { geocodeVenues } from "./services/geocode.js";
+import { geocodeVenues, backfillVenueWebsites } from "./services/geocode.js";
 import { runAvailabilityCheck } from "./services/availability.js";
 import { runGenreEnrichment } from "./services/genre-enrichment.js";
 import { runSurpriseScore } from "./services/surprise-score.js";
@@ -55,6 +55,9 @@ export async function runPipeline() {
     // failure here must not skip the enrichment steps below.
     try {
       await geocodeVenues();
+      // Only touches venues that still have no website, so this is a no-op on
+      // most runs and only pays for lookups when a new venue appears.
+      await backfillVenueWebsites();
     } catch (err) {
       console.error(`  ❌ Geocoding failed (continuing): ${err.message}`);
     }
