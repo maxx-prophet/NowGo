@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseSetTimes } from "./jazz-nyc.js";
+import { parseSetTimes, nycDateStr } from "./jazz-nyc.js";
 
 // Formats below are taken verbatim from the live jazz-nyc.com schedule table.
 
@@ -69,4 +69,26 @@ test("deduplicates repeated set times", () => {
 
 test("ignores an unparseable fragment but keeps the good ones", () => {
   assert.deepEqual(parseSetTimes("7:00 PM & TBA"), ["19:00:00"]);
+});
+
+// ─── NYC calendar date ───────────────────────────────────────────────────────
+
+test("nycDateStr uses the NYC date, not the server's local date", () => {
+  // 00:32 UTC on Aug 5 is still 20:32 on Aug 4 in New York. Railway runs UTC,
+  // so this is exactly the case that made the 8pm run fetch tomorrow.
+  assert.equal(nycDateStr(new Date("2026-08-05T00:32:00Z")), "08/04/26");
+});
+
+test("nycDateStr rolls over at NYC midnight, not UTC midnight", () => {
+  assert.equal(nycDateStr(new Date("2026-08-05T03:59:00Z")), "08/04/26"); // 23:59 ET
+  assert.equal(nycDateStr(new Date("2026-08-05T04:01:00Z")), "08/05/26"); // 00:01 ET
+});
+
+test("nycDateStr handles EST as well as EDT", () => {
+  // January: NYC is UTC-5, so 04:30 UTC is still the previous evening.
+  assert.equal(nycDateStr(new Date("2027-01-15T04:30:00Z")), "01/14/27");
+});
+
+test("nycDateStr zero-pads month and day", () => {
+  assert.equal(nycDateStr(new Date("2026-03-07T18:00:00Z")), "03/07/26");
 });

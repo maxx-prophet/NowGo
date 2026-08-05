@@ -49,6 +49,21 @@ export function parseSetTimes(timeStr) {
   return times;
 }
 
+// The schedule keys rows by NYC calendar date, so "today" must be computed in
+// America/New_York — not in the server's local zone. Railway runs UTC, where
+// everything after 8pm ET is already tomorrow, which made the 8pm pipeline run
+// fetch the wrong day's schedule.
+export function nycDateStr(now = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "2-digit",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const get = (type) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("month")}/${get("day")}/${get("year")}`;
+}
+
 function parseDate(dateStr) {
   const match = dateStr.match(/(\d+)\/(\d+)\/(\d+)/);
   if (!match) return null;
@@ -106,8 +121,7 @@ function normalizeRow(date, time, area, venue, performer) {
 // ─── FETCH ───────────────────────────────────────────────────────────────────
 
 export async function fetchJazzNYC() {
-  const today = new Date();
-  const todayStr = `${String(today.getMonth() + 1).padStart(2, "0")}/${String(today.getDate()).padStart(2, "0")}/${String(today.getFullYear()).slice(2)}`;
+  const todayStr = nycDateStr();
 
   console.log("\n📡 Fetching Jazz NYC...");
   console.log(`   Looking for date: ${todayStr}`);
