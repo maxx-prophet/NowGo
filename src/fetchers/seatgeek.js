@@ -95,6 +95,31 @@ function mapSGAvailability(e) {
   return "available";
 }
 
+// SeatGeek describes the resale market; Ticketmaster describes its own
+// inventory, and the event's ticket link points at Ticketmaster. So SeatGeek
+// may only ADD information, never contradict a definitive Ticketmaster status.
+//
+// Overwriting unconditionally sent users to dead Ticketmaster pages for events
+// TM had already marked offsale, and relabelled half of the on-sale catalog
+// "unknown" simply because SeatGeek had no listing for it.
+//
+// Rule: the more restrictive known tier wins; "unknown" never beats a known one.
+const AVAILABILITY_RANK = {
+  cancelled: 4,
+  sold_out: 3,
+  scarce: 2,
+  available: 1,
+};
+
+export function resolveAvailability(tmTier, sgTier) {
+  const tmRank = AVAILABILITY_RANK[tmTier] ?? 0;
+  const sgRank = AVAILABILITY_RANK[sgTier] ?? 0;
+
+  // Neither side knows anything.
+  if (!tmRank && !sgRank) return tmTier ?? sgTier ?? "unknown";
+  return sgRank > tmRank ? sgTier : tmTier;
+}
+
 // ─── MERGE ───────────────────────────────────────────────────────────────────
 
 function norm(s) {
@@ -156,7 +181,10 @@ export async function mergeEvents(tmEvents, sgEvents, aliasMap = new Map(), dbPo
         tmEvent._pricedBy = "seatgeek";
         pricesFilled++;
       }
-      tmEvent.availabilityTier = match.availabilityTier;
+      tmEvent.availabilityTier = resolveAvailability(
+        tmEvent.availabilityTier,
+        match.availabilityTier
+      );
       usedSgIds.add(match.id);
     }
   });
