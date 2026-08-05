@@ -14,22 +14,39 @@ const AREA_NAMES = {
 
 // ─── PARSE ───────────────────────────────────────────────────────────────────
 
-function parseTime(timeStr) {
-  if (!timeStr) return { time: null, endTime: null };
-  const parts = timeStr.split("-").map((s) => s.trim());
-  const toTime24 = (t) => {
-    const match = t.match(/(\d+):(\d+)(AM|PM)/i);
-    if (!match) return null;
-    let [, h, m, period] = match;
-    h = parseInt(h);
-    if (period.toUpperCase() === "PM" && h !== 12) h += 12;
-    if (period.toUpperCase() === "AM" && h === 12) h = 0;
-    return `${String(h).padStart(2, "0")}:${m}:00`;
-  };
-  return {
-    time: toTime24(parts[0]),
-    endTime: parts[1] ? toTime24(parts[1]) : null,
-  };
+// The schedule table writes set times in several shapes:
+//   "7:00PM"                  single set
+//   "7:00PM - 11:00PM"        a range; we want the start
+//   "7:00 PM & 9:30 PM"       two sets, with a space before the meridiem
+//   "8:00 PM & 10:30 PM"      the second set is often the late-night one
+//
+// Each set is a separate thing a user can go to, so each becomes its own event.
+// Anything unparseable yields an empty list rather than a null that downstream
+// code turns into midnight — a mistimed event is worse than a missing one.
+export function parseSetTimes(timeStr) {
+  if (typeof timeStr !== "string" || !timeStr.trim()) return [];
+
+  const times = [];
+  // Split on set separators (& / "and" / ","), then take the start of any range.
+  for (const chunk of timeStr.split(/\s*(?:&|,|\band\b)\s*/i)) {
+    const start = chunk.split(/\s*-\s*/)[0];
+    // Optional whitespace and dots around the meridiem: "7:00PM", "7:00 PM", "7:00 p.m."
+    const match = start.match(/(\d{1,2}):(\d{2})\s*([AP])\.?\s*M\.?/i);
+    if (!match) continue;
+
+    const [, rawH, minutes, meridiem] = match;
+    let hour = parseInt(rawH, 10);
+    if (hour < 1 || hour > 12 || parseInt(minutes, 10) > 59) continue;
+
+    const isPM = meridiem.toUpperCase() === "P";
+    if (isPM && hour !== 12) hour += 12;
+    if (!isPM && hour === 12) hour = 0;
+
+    const formatted = `${String(hour).padStart(2, "0")}:${minutes}:00`;
+    if (!times.includes(formatted)) times.push(formatted);
+  }
+
+  return times;
 }
 
 function parseDate(dateStr) {
@@ -47,8 +64,7 @@ function makeId(date, time, venue, performer) {
   return `jnyc_${slug}`;
 }
 
-function normalizeRow(date, timeStr, area, venue, performer) {
-  const { time } = parseTime(timeStr);
+function normalizeRow(date, time, area, venue, performer) {
   const nycOffsetStr = new Date().toLocaleString("en-US", { timeZone: "America/New_York", timeZoneName: "shortOffset" }).match(/GMT([+-]\d+)/)?.[1];
   const nycOffset = nycOffsetStr ? `${parseInt(nycOffsetStr) >= 0 ? "+" : "-"}${String(Math.abs(parseInt(nycOffsetStr))).padStart(2, "0")}:00` : "-04:00";
   const timeWithTz = time ? `${time}${nycOffset}` : null;
@@ -123,6 +139,7 @@ export async function fetchJazzNYC() {
     .trim();
 
   const events = [];
+  let skippedNoTime = 0;
 
   for (const row of rows) {
     const cellMatches = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)];
@@ -138,9 +155,21 @@ export async function fetchJazzNYC() {
     if (!NYC_AREAS.has(area)) continue;
     if (!venue || !performer) continue;
 
-    events.push(normalizeRow(parseDate(date), timeStr, area, venue, performer));
+    // One row can list several sets ("8:00 PM & 10:30 PM"); each is a separate
+    // thing a user can go to, so each becomes its own event.
+    const setTimes = parseSetTimes(timeStr);
+    if (!setTimes.length) {
+      skippedNoTime += 1;
+      continue;
+    }
+    for (const time of setTimes) {
+      events.push(normalizeRow(parseDate(date), time, area, venue, performer));
+    }
   }
 
+  if (skippedNoTime) {
+    console.log(`   ⚠️  Skipped ${skippedNoTime} rows with no parseable set time`);
+  }
   console.log(`   ✅ Got ${events.length} NYC jazz events tonight`);
   return events;
 }
