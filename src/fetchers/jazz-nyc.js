@@ -79,11 +79,13 @@ function makeId(date, time, venue, performer) {
   return `jnyc_${slug}`;
 }
 
-function normalizeRow(date, time, area, venue, performer) {
-  const nycOffsetStr = new Date().toLocaleString("en-US", { timeZone: "America/New_York", timeZoneName: "shortOffset" }).match(/GMT([+-]\d+)/)?.[1];
-  const nycOffset = nycOffsetStr ? `${parseInt(nycOffsetStr) >= 0 ? "+" : "-"}${String(Math.abs(parseInt(nycOffsetStr))).padStart(2, "0")}:00` : "-04:00";
-  const timeWithTz = time ? `${time}${nycOffset}` : null;
-
+// `time` must stay a bare "HH:MM:SS" in NYC local time. db/ingest.js builds
+// `${date}T${time}Z` and applies the correct Eastern offset for that date
+// itself (handling DST), so appending an offset here produced strings like
+// "2026-08-05T19:00:00-04:00Z" — an invalid date carrying both an offset and Z.
+// Ingest then skipped the row with "Invalid time value", which is why only
+// events whose time FAILED to parse survived, defaulting to midnight.
+export function normalizeRow(date, time, area, venue, performer) {
   return {
     id: makeId(date, time, venue, performer),
     source: "jazz_nyc",
@@ -91,7 +93,7 @@ function normalizeRow(date, time, area, venue, performer) {
     url: "https://www.jazz-nyc.com",
 
     date,
-    time: timeWithTz,
+    time,
     doorsOpen: null,
 
     venue,

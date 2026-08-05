@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseSetTimes, nycDateStr } from "./jazz-nyc.js";
+import { parseSetTimes, nycDateStr, normalizeRow } from "./jazz-nyc.js";
 
 // Formats below are taken verbatim from the live jazz-nyc.com schedule table.
 
@@ -91,4 +91,30 @@ test("nycDateStr handles EST as well as EDT", () => {
 
 test("nycDateStr zero-pads month and day", () => {
   assert.equal(nycDateStr(new Date("2026-03-07T18:00:00Z")), "03/07/26");
+});
+
+// ─── ingest contract ─────────────────────────────────────────────────────────
+// db/ingest.js builds `${date}T${time}Z` and applies the Eastern offset itself.
+// The fetcher must therefore emit a BARE local time. Emitting "19:00:00-04:00"
+// produced "...T19:00:00-04:00Z", an invalid date, and ingest silently skipped
+// every affected event — which is how all jazz events ended up at midnight.
+
+test("normalizeRow emits a bare HH:MM:SS time with no offset", () => {
+  const row = normalizeRow("2026-08-05", "22:30:00", "MT", "Blue Note", "Kenny Garrett");
+  assert.match(row.time, /^\d{2}:\d{2}:\d{2}$/);
+  assert.ok(!/[+-]\d{2}:\d{2}$/.test(row.time), "time must not carry a UTC offset");
+});
+
+test("normalizeRow output is parseable the way ingest parses it", () => {
+  const row = normalizeRow("2026-08-05", "22:30:00", "MT", "Blue Note", "Kenny Garrett");
+  const parsed = new Date(`${row.date}T${row.time}Z`);
+  assert.ok(!Number.isNaN(parsed.getTime()), "ingest would reject this as Invalid time value");
+});
+
+test("every set time produced by parseSetTimes survives ingest parsing", () => {
+  for (const t of parseSetTimes("8:00 PM & 10:30 PM")) {
+    const row = normalizeRow("2026-08-05", t, "MT", "Blue Note", "Kenny Garrett");
+    const parsed = new Date(`${row.date}T${row.time}Z`);
+    assert.ok(!Number.isNaN(parsed.getTime()), `ingest would reject ${row.time}`);
+  }
 });
