@@ -120,8 +120,17 @@ function normalizeRow(date, time, area, venue, performer) {
 
 // ─── FETCH ───────────────────────────────────────────────────────────────────
 
+// jazz-nyc.com drops the current day's listings from its table during the
+// evening (observed rolling over around 8:30pm ET), so a late run finds nothing
+// for "today". The daytime runs are what capture tonight's late sets; the
+// evening run prefetches tomorrow instead of coming back empty.
 export async function fetchJazzNYC() {
-  const todayStr = nycDateStr();
+  const now = new Date();
+  const targetDates = new Set([
+    nycDateStr(now),
+    nycDateStr(new Date(now.getTime() + 24 * 60 * 60 * 1000)),
+  ]);
+  const todayStr = [...targetDates].join(", ");
 
   console.log("\n📡 Fetching Jazz NYC...");
   console.log(`   Looking for date: ${todayStr}`);
@@ -165,7 +174,7 @@ export async function fetchJazzNYC() {
     const venue = cellText(cellMatches[3][1]);
     const performer = cellText(cellMatches[4][1]);
 
-    if (date !== todayStr) continue;
+    if (!targetDates.has(date)) continue;
     if (!NYC_AREAS.has(area)) continue;
     if (!venue || !performer) continue;
 
