@@ -4,6 +4,7 @@ import pool from "../db/index.js";
 import { startScheduler, runPipeline } from "./scheduler.js";
 import { getTravelTime, computeLeaveBy } from "./services/travel.js";
 import { rankEvents, RANKING_POOL } from "./services/ranking.js";
+import { WALK_IN_SQL } from "./services/walk-in.js";
 dotenv.config({ path: ".env.nowgo" });
 
 const app = express();
@@ -85,7 +86,10 @@ app.get("/events/tonight", async (req, res) => {
           ${EVENT_URL_SQL} AS url,
           e.segment, e.genre, e.price_min, e.price_max, e.is_free,
           e.availability_tier, e.last_checked_at, e.surprise_score,
-          e.walk_in, e.hook,
+          ${WALK_IN_SQL} AS walk_in,
+          v.walk_in_policy,
+          v.door_price,
+          e.hook,
           v.name        AS venue_name,
           v.address     AS venue_address,
           v.neighborhood,
@@ -113,7 +117,10 @@ app.get("/events/tonight", async (req, res) => {
           ${EVENT_URL_SQL} AS url,
           e.segment, e.genre, e.price_min, e.price_max, e.is_free,
           e.availability_tier, e.last_checked_at, e.surprise_score,
-          e.walk_in, e.hook,
+          ${WALK_IN_SQL} AS walk_in,
+          v.walk_in_policy,
+          v.door_price,
+          e.hook,
           v.name        AS venue_name,
           v.address     AS venue_address,
           v.neighborhood,
@@ -179,6 +186,9 @@ app.get("/events/:id", async (req, res) => {
          e.*,
          -- listed after e.* so it overrides the raw e.url in the result row
          ${EVENT_URL_SQL} AS url,
+         ${WALK_IN_SQL} AS walk_in,
+         v.walk_in_policy,
+         v.door_price,
          v.name        AS venue_name,
          v.address     AS venue_address,
          v.neighborhood,
