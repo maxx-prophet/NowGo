@@ -23,8 +23,11 @@ export function qualifiesAsWalkIn(policy) {
 
 // Defined once and interpolated into SQL, the same way EVENT_URL_SQL works in
 // src/server.js, so the rule cannot drift between the query and the app.
-// Assumes the venues table is joined as `v`.
-export const WALK_IN_SQL = `v.walk_in_policy IN (${WALK_IN_QUALIFYING.map((p) => `'${p}'`).join(", ")})`;
+// Assumes the venues table is joined as `v` via LEFT JOIN, so an event with
+// no venue_id yields no `v` row and v.walk_in_policy is SQL NULL. COALESCE to
+// 'unknown' (a valid policy value) so the expression evaluates to FALSE
+// instead of NULL — the API's walk_in field must always be a boolean.
+export const WALK_IN_SQL = `COALESCE(v.walk_in_policy, 'unknown') IN (${WALK_IN_QUALIFYING.map((p) => `'${p}'`).join(", ")})`;
 
 // Names venues that have events but no curation decision yet. Without this a
 // new venue silently defaults to 'unknown' and never reaches the walk-ins

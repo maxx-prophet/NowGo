@@ -53,3 +53,15 @@ test("WALK_IN_SQL references the venues alias and every qualifying policy", () =
   }
   assert.ok(!WALK_IN_SQL.includes("'standby'"), "standby must not qualify");
 });
+
+test("WALK_IN_SQL is NULL-safe for events with no venue row", () => {
+  // A LEFT JOIN on venues yields no `v` row when events.venue_id is null, so
+  // v.walk_in_policy is SQL NULL and `NULL IN (...)` is NULL, not FALSE.
+  // COALESCE to 'unknown' keeps the expression — and therefore the API's
+  // walk_in field — a real boolean rather than sometimes null.
+  assert.match(WALK_IN_SQL, /COALESCE\(v\.walk_in_policy,\s*'unknown'\)/);
+  assert.match(WALK_IN_SQL, /v\.walk_in_policy/);
+  for (const p of WALK_IN_QUALIFYING) {
+    assert.ok(WALK_IN_SQL.includes(`'${p}'`), `${p} missing from SQL`);
+  }
+});
