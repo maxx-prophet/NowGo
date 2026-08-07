@@ -17,9 +17,12 @@ than working around it.
 ## Backend gotchas
 
 **Routes are not under `/api`.** They are `/health`, `/events/tonight`,
-`/events/:id`, `/travel`, `/sources`, and `POST /pipeline/run`. Probing
-`/api/events` returns a 404 that looks exactly like an outage when the service
-is healthy.
+`/events/:id`, `/travel`, `/sources`, `/venues/uncurated`, and
+`POST /pipeline/run`. Probing `/api/events` returns a 404 that looks exactly
+like an outage when the service is healthy.
+
+**`/venues/uncurated` returns HTML, not JSON** — it is the walk-in curation
+worklist, meant to be opened in a browser. Add `?format=json` for the rows.
 
 **Event JSON field names** differ from the obvious guesses:
 
@@ -109,9 +112,19 @@ These are real as of 2026-08-04. Verify before relying on any of them.
   `unknown`, default `unknown`) is set by hand per venue in
   `db/migrations/009_venue_walk_in.sql`; the API derives each event's `walk_in`
   boolean from its venue's policy (see `WALK_IN_SQL` in
-  `src/services/walk-in.js`). Most venues are still uncurated (`unknown`), so
-  they never appear in the "walk-ins only" filter — that is expected, not a
-  bug, until more venues get curated.
+  `src/services/walk-in.js`). Venues left `unknown` never appear in the
+  "walk-ins only" filter — that is expected, not a bug, until they are curated.
+
+  `010_venue_walk_in_ticketed.sql` swept 143 venues to `none` (reserved-seat
+  theatres, stadiums, timed-entry museums, concert halls). GA music clubs were
+  deliberately left `unknown` — door sales at a non-sold-out show are common
+  but not guaranteed, so they need a per-venue decision, not a category one.
+
+  **The worklist is `GET /venues/uncurated`**, not something you have to dig
+  out of the logs. `reportUncuratedVenues()` still logs the same set after each
+  pipeline run. Curating a venue is one `UPDATE`; the migration seeds are
+  guarded with `COALESCE(walk_in_policy,'unknown') = 'unknown'` so re-running
+  migrations never clobbers it.
 - **`price_min` is null on most events**, so the budget filter has little to work
   with.
 - **`availability_tier` is `unknown` on a sizeable share** of events.
