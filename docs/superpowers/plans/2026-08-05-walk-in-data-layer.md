@@ -440,7 +440,8 @@ print('venues:', sorted(set(str(e.get('venue_name')) for e in evs)))
 bad=[e for e in evs if e.get('walk_in') is not True]
 print('NON walk-in leaked through:', len(bad))
 "
-kill $SRV 2>/dev/null```
+kill $SRV 2>/dev/null
+```
 
 Expected: `walk_ins_only=true` returns only events at Arthur's Tavern, Cellar Dog, Mezzrow, Smalls, The Django, Zinc Bar and Blue Note Jazz Club — around 36 events. `Village Vangard` must NOT appear (it is `standby`). `NON walk-in leaked through: 0`.
 
