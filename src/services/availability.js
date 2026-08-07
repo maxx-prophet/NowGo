@@ -16,13 +16,19 @@ const DELAY_MS = 600;  // stay under TicketsData rate limits
 
 // ─── TIER MAPPING ─────────────────────────────────────────────────────────────
 
-function mapTier(body) {
+// Must return a value the events.availability_tier CHECK constraint permits:
+// available / scarce / sold_out / cancelled / unknown. This previously returned
+// 'limited', which the constraint rejects, so every partially-available event
+// would have thrown on write the moment this service ran with credentials.
+// 'scarce' is the existing word for the same idea and is already ranked in
+// AVAILABILITY_RANK in the SeatGeek fetcher.
+export function mapTier(body) {
   const offers = body?._embedded?.offer ?? body?.offers ?? [];
   const listings = body?.listings ?? body?.data ?? [];
   const count = (Array.isArray(offers) ? offers.length : 0)
               + (Array.isArray(listings) ? listings.length : 0);
   if (count > 3) return "available";
-  if (count > 0) return "limited";
+  if (count > 0) return "scarce";
   return "sold_out";
 }
 
@@ -112,9 +118,14 @@ export async function runAvailabilityCheck() {
       await sleep(DELAY_MS);
     } catch (err) {
       errors++;
+      // Record that the attempt happened without touching the tier. This used
+      // to write 'unverified', which the CHECK constraint rejects — and the
+      // .catch() below meant that rejection was swallowed silently, so the
+      // failure never surfaced. There is nothing to write anyway: the guard
+      // limited it to rows already 'unknown', and last_checked_at is what
+      // distinguishes "checked, couldn't confirm" from "never checked".
       await pool.query(
-        `UPDATE events SET availability_tier = 'unverified', last_checked_at = now()
-         WHERE event_id = $1 AND availability_tier = 'unknown'`,
+        `UPDATE events SET last_checked_at = now() WHERE event_id = $1`,
         [event.event_id]
       ).catch(() => {});
       console.warn(`  ⚠️  ${event.name}: ${err.message}`);
