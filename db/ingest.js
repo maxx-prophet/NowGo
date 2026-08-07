@@ -29,9 +29,19 @@ function clean(val) {
 
 // ─── UPSERT HELPERS ───────────────────────────────────────────────────────────
 
+// The lookup key for venue_aliases: lowercased with every non-alphanumeric
+// character removed. Note this strips rather than folds accents, so
+// 'Bar Lunàtico' keys as 'barluntico'.
+//
+// Exported because migrations hand-write alias keys, and a key that this
+// function would never produce is an alias that can never match — silently.
+export function venueAliasKey(name) {
+  return String(name ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
 async function resolveVenueAlias(client, name) {
   if (!name) return name;
-  const alias = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const alias = venueAliasKey(name);
   try {
     const { rows } = await client.query(
       `SELECT v.name FROM venue_aliases va

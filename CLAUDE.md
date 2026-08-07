@@ -128,6 +128,31 @@ These are real as of 2026-08-04. Verify before relying on any of them.
 - **`price_min` is null on most events**, so the budget filter has little to work
   with.
 - **`availability_tier` is `unknown` on a sizeable share** of events.
+- **jazz-nyc.com writes the same room under several labels, and they drift.**
+  The venue cell is a link, and **the `href` is the stable identity — the text
+  is not**. Today's table has `Django(The)` (42 rows) and `The Django` (3) both
+  pointing at `thedjangonyc.com`; `Bar Lunàtico`/`LunAtico`,
+  `Jazz Gallery (The)`/`The Jazz Gallery` and `Pangea`/`Pangea Restaurant and
+  Bar` behaved the same way. Each spelling became its own `venues` row, which
+  splits a venue's events **and its walk-in curation** — `The Django` was
+  `space_permitting` while `Django(The)` sat `unknown`, so its events never
+  reached the filter. Merged in `011_merge_duplicate_jazz_venues.sql` via
+  `venue_aliases`.
+
+  **The fetcher currently discards that `href`** (`src/fetchers/jazz-nyc.js`
+  reads only the cell text), so nothing detects the next drift automatically.
+
+  Do **not** merge venues on shared address alone: Lincoln Center, New World
+  Stages, the Williams Center and Birdland all run genuinely separate rooms at
+  one address. Require matching address *and* website.
+
+- **`Jazzcultural` is a real venue, not a parsing artifact.** It is Spike
+  Wilner's (Smalls/Mezzrow) third club, opened March 2026 at 349 W 46th St in
+  the former Swing 46. Its listings are distinct from Smalls' and Mezzrow's
+  even though jazz-nyc.com points all three at `smallslive.com`. Its own
+  `jazzcultural.com` is close to an empty placeholder, so its event links are
+  thin — that is the site being sparse, not bad data.
+
 - **jazz-nyc.com has no per-event links.** Every event from that source carries
   the same homepage URL. The API substitutes `venues.website` (resolved via
   Google Place Details) where available — see `EVENT_URL_SQL` in `src/server.js`.
