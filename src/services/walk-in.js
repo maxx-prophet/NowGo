@@ -37,7 +37,7 @@ export async function reportUncuratedVenues(pool = poolDefault) {
     `SELECT v.name, count(e.event_id) AS events
        FROM venues v
        JOIN events e ON e.venue_id = v.venue_id
-      WHERE v.walk_in_policy = 'unknown'
+      WHERE COALESCE(v.walk_in_policy, 'unknown') = 'unknown'
         AND e.start_time > now()
       GROUP BY v.name
       ORDER BY count(e.event_id) DESC`

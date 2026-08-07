@@ -70,7 +70,7 @@ UPDATE venues SET walk_in_policy = 'space_permitting', door_price = 25.00
 
 The `AND walk_in_policy = 'unknown'` guard means the seed only ever fills a gap. Once a human curates a venue, re-running migrations leaves it alone.
 
-Nine venues are seeded: the seven researched above, plus **The Django** and **Zinc Bar**, which ClickUp `86b9wfdnt` names as reliable walk-in venues. The task author's curation is treated as a valid source alongside research, and both are recorded in the migration comments so a later reader can tell which is which.
+Nine venues were considered: the seven researched above, plus **The Django** and **Zinc Bar**, which ClickUp `86b9wfdnt` names as reliable walk-in venues. Of those, eight are seeded — Birdland is deliberately left `unknown` since its own FAQ is silent on walk-ins and secondary sources conflict, so it stays uncurated rather than being guessed in either direction. The task author's curation is treated as a valid source alongside research, and both are recorded in the migration comments so a later reader can tell which is which.
 
 Together these cover **40 of 83 upcoming jazz events (48%)** at time of writing.
 

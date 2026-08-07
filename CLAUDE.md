@@ -82,6 +82,11 @@ large `skipped` count is not normal.
 rounds of black-box probing from outside told me less than one log dump. Ask for
 the deploy logs early.
 
+**Railway does NOT run database migrations.** `railway.toml` only sets
+`startCommand`; there is no migrate step in the deploy. Schema-dependent code
+must not be merged until `npm run migrate` has been applied to production by
+hand, or the deploy 500s on every query touching the new columns.
+
 ## Time zones
 
 **Railway runs UTC.** Anything that means "today in NYC" must be computed
@@ -99,8 +104,14 @@ These are real as of 2026-08-04. Verify before relying on any of them.
 
 - **`sources.last_fetched_at` is never written.** Always null. It cannot be used
   to tell whether a fetcher succeeded.
-- **`walk_in` is false on every event**, so the "walk-ins only" filter in the app
-  returns an empty list every time.
+- **`walk_in` is a curated property of the venue, not the event.**
+  `venues.walk_in_policy` (`always` / `space_permitting` / `standby` / `none` /
+  `unknown`, default `unknown`) is set by hand per venue in
+  `db/migrations/009_venue_walk_in.sql`; the API derives each event's `walk_in`
+  boolean from its venue's policy (see `WALK_IN_SQL` in
+  `src/services/walk-in.js`). Most venues are still uncurated (`unknown`), so
+  they never appear in the "walk-ins only" filter — that is expected, not a
+  bug, until more venues get curated.
 - **`price_min` is null on most events**, so the budget filter has little to work
   with.
 - **`availability_tier` is `unknown` on a sizeable share** of events.

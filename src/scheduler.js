@@ -52,19 +52,26 @@ export async function runPipeline() {
     console.log(`  💾 Ingested ${ok} events, skipped ${skipped}`);
 
     // Must run after ingest so new venue rows exist. Isolated in its own
-    // try/catch: geocoding, website backfill, and walk-in reporting each
-    // depend on an external API, quota, or their own DB query, and a failure
-    // in any one must not skip the enrichment steps below.
+    // try/catch: geocoding and website backfill both depend on an external
+    // API and quota, and a failure in either must not skip the enrichment
+    // steps below.
     try {
       await geocodeVenues();
       // Only touches venues that still have no website, so this is a no-op on
       // most runs and only pays for lookups when a new venue appears.
       await backfillVenueWebsites();
-      // Names venues that still need a walk-in decision. Curation is manual,
-      // so without this a new venue silently never reaches the walk-ins filter.
-      await reportUncuratedVenues();
     } catch (err) {
       console.error(`  ❌ Venue enrichment failed (continuing): ${err.message}`);
+    }
+
+    // Names venues that still need a walk-in decision. Curation is manual, so
+    // without this a new venue silently never reaches the walk-ins filter.
+    // Separate try/catch: this is a plain DB query with no external
+    // dependency, so it cannot fail for the same reasons as the block above.
+    try {
+      await reportUncuratedVenues();
+    } catch (err) {
+      console.error(`  ❌ Walk-in curation report failed (continuing): ${err.message}`);
     }
 
     await runVenueEmbeddings();

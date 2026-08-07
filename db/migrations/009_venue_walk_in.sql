@@ -32,25 +32,25 @@ ALTER TABLE venues ADD COLUMN IF NOT EXISTS door_price NUMERIC(6,2);
 --
 -- Sourced from venue research (2026-08-05):
 
-UPDATE venues SET walk_in_policy = 'always', door_price = 10.00
- WHERE lower(name) = 'cellar dog' AND walk_in_policy = 'unknown';
+UPDATE venues SET walk_in_policy = 'always', door_price = COALESCE(door_price, 10.00)
+ WHERE lower(name) = 'cellar dog' AND COALESCE(walk_in_policy, 'unknown') = 'unknown';
 
-UPDATE venues SET walk_in_policy = 'always', door_price = 0.00
- WHERE lower(name) = 'arthur''s tavern' AND walk_in_policy = 'unknown';
+UPDATE venues SET walk_in_policy = 'always', door_price = COALESCE(door_price, 0.00)
+ WHERE lower(name) = 'arthur''s tavern' AND COALESCE(walk_in_policy, 'unknown') = 'unknown';
 
-UPDATE venues SET walk_in_policy = 'space_permitting', door_price = 25.00
- WHERE lower(name) = 'smalls' AND walk_in_policy = 'unknown';
+UPDATE venues SET walk_in_policy = 'space_permitting', door_price = COALESCE(door_price, 25.00)
+ WHERE lower(name) = 'smalls' AND COALESCE(walk_in_policy, 'unknown') = 'unknown';
 
-UPDATE venues SET walk_in_policy = 'space_permitting', door_price = 25.00
- WHERE lower(name) = 'mezzrow' AND walk_in_policy = 'unknown';
+UPDATE venues SET walk_in_policy = 'space_permitting', door_price = COALESCE(door_price, 25.00)
+ WHERE lower(name) = 'mezzrow' AND COALESCE(walk_in_policy, 'unknown') = 'unknown';
 
 UPDATE venues SET walk_in_policy = 'space_permitting'
- WHERE lower(name) = 'blue note jazz club' AND walk_in_policy = 'unknown';
+ WHERE lower(name) = 'blue note jazz club' AND COALESCE(walk_in_policy, 'unknown') = 'unknown';
 
 -- NOTE: 'Village Vangard' is misspelled in the venues table (missing the 'u').
 -- Seeded on the actual stored spelling; correcting the name is out of scope.
 UPDATE venues SET walk_in_policy = 'standby'
- WHERE lower(name) = 'village vangard' AND walk_in_policy = 'unknown';
+ WHERE lower(name) = 'village vangard' AND COALESCE(walk_in_policy, 'unknown') = 'unknown';
 
 -- Birdland's own FAQ is silent on walk-ins and secondary sources conflict, so
 -- it stays 'unknown' rather than being guessed in either direction.
@@ -59,7 +59,7 @@ UPDATE venues SET walk_in_policy = 'standby'
 -- which names these as reliable walk-in venues:
 
 UPDATE venues SET walk_in_policy = 'space_permitting'
- WHERE lower(name) = 'the django' AND walk_in_policy = 'unknown';
+ WHERE lower(name) = 'the django' AND COALESCE(walk_in_policy, 'unknown') = 'unknown';
 
 UPDATE venues SET walk_in_policy = 'space_permitting'
- WHERE lower(name) = 'zinc bar' AND walk_in_policy = 'unknown';
+ WHERE lower(name) = 'zinc bar' AND COALESCE(walk_in_policy, 'unknown') = 'unknown';
