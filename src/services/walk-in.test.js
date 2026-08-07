@@ -1,11 +1,27 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import {
   WALK_IN_QUALIFYING,
   WALK_IN_POLICIES,
   qualifiesAsWalkIn,
   WALK_IN_SQL,
 } from "./walk-in.js";
+
+const MIGRATIONS_DIR = join(import.meta.dirname, "../../db/migrations");
+
+// Every UPDATE across the walk-in seed migrations, as { file, sql }.
+const seedStatements = readdirSync(MIGRATIONS_DIR)
+  .filter((f) => f.includes("walk_in"))
+  .flatMap((file) => {
+    const sql = readFileSync(join(MIGRATIONS_DIR, file), "utf8")
+      .replace(/^\s*--.*$/gm, ""); // strip comment lines; they contain example UPDATEs
+    return [...sql.matchAll(/UPDATE\s+venues[\s\S]*?;/gi)].map((m) => ({
+      file,
+      sql: m[0],
+    }));
+  });
 
 test("qualifiesAsWalkIn is true for policies a user can rely on", () => {
   assert.equal(qualifiesAsWalkIn("always"), true);
@@ -52,6 +68,38 @@ test("WALK_IN_SQL references the venues alias and every qualifying policy", () =
     assert.ok(WALK_IN_SQL.includes(`'${p}'`), `${p} missing from SQL`);
   }
   assert.ok(!WALK_IN_SQL.includes("'standby'"), "standby must not qualify");
+});
+
+test("the walk-in seed migrations actually contain seed statements", () => {
+  // Guards the two tests below: a regex that silently matches nothing would
+  // make both of them pass vacuously.
+  assert.ok(seedStatements.length > 5, `only found ${seedStatements.length}`);
+});
+
+test("every seeded policy value is one the CHECK constraint allows", () => {
+  // A typo like 'non' would be rejected by Postgres at migrate time and take
+  // the whole deploy's migration step with it.
+  for (const { file, sql } of seedStatements) {
+    const [, value] = sql.match(/walk_in_policy\s*=\s*'([^']*)'/) ?? [];
+    assert.ok(value, `${file}: no walk_in_policy assignment found`);
+    assert.ok(
+      WALK_IN_POLICIES.includes(value),
+      `${file}: '${value}' is not a valid policy`
+    );
+  }
+});
+
+test("every seed statement is guarded so re-running migrations cannot clobber curation", () => {
+  // db/migrate.js re-runs EVERY migration on EVERY run. An unguarded UPDATE
+  // would silently revert hand-curated venues on the next deploy — the failure
+  // would be invisible until someone noticed a venue had reverted.
+  for (const { file, sql } of seedStatements) {
+    assert.match(
+      sql,
+      /COALESCE\(walk_in_policy,\s*'unknown'\)\s*=\s*'unknown'/,
+      `${file}: seed statement is missing the 'unknown' guard:\n${sql}`
+    );
+  }
 });
 
 test("WALK_IN_SQL is NULL-safe for events with no venue row", () => {
