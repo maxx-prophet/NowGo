@@ -4,6 +4,7 @@ import { fetchSeatGeek } from "./fetchers/seatgeek.js";
 import { fetchJazzNYC } from "./fetchers/jazz-nyc.js";
 import { ingestEvents } from "../db/ingest.js";
 import { geocodeVenues, backfillVenueWebsites } from "./services/geocode.js";
+import { reportUncuratedVenues } from "./services/walk-in.js";
 import { runAvailabilityCheck } from "./services/availability.js";
 import { runGenreEnrichment } from "./services/genre-enrichment.js";
 import { runSurpriseScore } from "./services/surprise-score.js";
@@ -58,6 +59,9 @@ export async function runPipeline() {
       // Only touches venues that still have no website, so this is a no-op on
       // most runs and only pays for lookups when a new venue appears.
       await backfillVenueWebsites();
+      // Names venues that still need a walk-in decision. Curation is manual,
+      // so without this a new venue silently never reaches the walk-ins filter.
+      await reportUncuratedVenues();
     } catch (err) {
       console.error(`  ❌ Geocoding failed (continuing): ${err.message}`);
     }
