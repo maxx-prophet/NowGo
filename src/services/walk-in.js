@@ -29,20 +29,31 @@ export function qualifiesAsWalkIn(policy) {
 // instead of NULL — the API's walk_in field must always be a boolean.
 export const WALK_IN_SQL = `COALESCE(v.walk_in_policy, 'unknown') IN (${WALK_IN_QUALIFYING.map((p) => `'${p}'`).join(", ")})`;
 
-// Names venues that have events but no curation decision yet. Without this a
-// new venue silently defaults to 'unknown' and never reaches the walk-ins
-// filter, with nothing surfacing that a decision is owed.
-export async function reportUncuratedVenues(pool = poolDefault) {
+// Venues that have upcoming events but no curation decision yet. Curation is
+// manual, so without this a new venue silently defaults to 'unknown' and never
+// reaches the walk-ins filter, with nothing surfacing that a decision is owed.
+//
+// Returns more than the log line uses: GET /venues/uncurated renders the same
+// rows as a page you can actually work from, and the website is what makes a
+// row actionable — it is where you check whether the venue takes walk-ins.
+export async function fetchUncuratedVenues(pool = poolDefault) {
   const { rows } = await pool.query(
-    `SELECT v.name, count(e.event_id) AS events
+    `SELECT v.venue_id, v.name, v.neighborhood, v.website,
+            count(e.event_id)::int AS events,
+            min(e.start_time)      AS next_event,
+            string_agg(DISTINCT e.source, ', ' ORDER BY e.source) AS sources
        FROM venues v
        JOIN events e ON e.venue_id = v.venue_id
       WHERE COALESCE(v.walk_in_policy, 'unknown') = 'unknown'
         AND e.start_time > now()
-      GROUP BY v.name
-      ORDER BY count(e.event_id) DESC`
+      GROUP BY v.venue_id, v.name, v.neighborhood, v.website
+      ORDER BY count(e.event_id) DESC, lower(v.name) ASC`
   );
+  return rows;
+}
 
+export async function reportUncuratedVenues(pool = poolDefault) {
+  const rows = await fetchUncuratedVenues(pool);
   const names = rows.map((r) => r.name);
   if (names.length) {
     console.log(

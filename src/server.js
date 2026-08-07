@@ -4,7 +4,8 @@ import pool from "../db/index.js";
 import { startScheduler, runPipeline } from "./scheduler.js";
 import { getTravelTime, computeLeaveBy } from "./services/travel.js";
 import { rankEvents, RANKING_POOL } from "./services/ranking.js";
-import { WALK_IN_SQL } from "./services/walk-in.js";
+import { WALK_IN_SQL, fetchUncuratedVenues } from "./services/walk-in.js";
+import { renderUncuratedVenuesPage } from "./views/uncurated-venues.js";
 dotenv.config({ path: ".env.nowgo" });
 
 const app = express();
@@ -42,6 +43,36 @@ app.get("/sources", async (req, res) => {
        FROM sources ORDER BY source_id`
     );
     res.json({ sources: rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── GET /venues/uncurated ───────────────────────────────────────────────────
+// The curation worklist as a page you can bookmark. reportUncuratedVenues()
+// logs the same set after every pipeline run, but a line in the Railway deploy
+// log is not somewhere anyone checks daily, so the reminder went unread.
+//
+// Read-only on purpose. Writing a policy from here would need auth — the whole
+// walk-ins filter is downstream of this data, and this service already has one
+// unauthenticated mutating endpoint (POST /pipeline/run) too many.
+//
+// ?format=json returns the rows instead of the page.
+
+app.get("/venues/uncurated", async (req, res) => {
+  try {
+    const venues = await fetchUncuratedVenues();
+
+    if (req.query.format === "json") {
+      return res.json({ count: venues.length, venues });
+    }
+
+    res
+      .type("html")
+      // Curation changes land in the DB by hand and the pipeline runs four
+      // times a day; a cached page would show a stale worklist.
+      .set("Cache-Control", "no-store")
+      .send(renderUncuratedVenuesPage(venues));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -249,6 +280,7 @@ app.listen(PORT, () => {
   console.log(`   GET /events/tonight?lat=40.758&lng=-73.9855&radius_miles=5`);
   console.log(`   GET /events/:id`);
   console.log(`   GET /sources`);
+  console.log(`   GET /venues/uncurated`);
 });
 
 export default app;
