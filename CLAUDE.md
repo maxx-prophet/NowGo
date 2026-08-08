@@ -103,7 +103,7 @@ clamps invalid hours unpredictably.
 
 ## Data quality — known gaps
 
-These are real as of 2026-08-04. Verify before relying on any of them.
+These are real as of 2026-08-07. Verify before relying on any of them.
 
 - **`sources.last_fetched_at` is never written.** Always null. It cannot be used
   to tell whether a fetcher succeeded.
@@ -115,19 +115,59 @@ These are real as of 2026-08-04. Verify before relying on any of them.
   `src/services/walk-in.js`). Venues left `unknown` never appear in the
   "walk-ins only" filter — that is expected, not a bug, until they are curated.
 
-  `010_venue_walk_in_ticketed.sql` swept 143 venues to `none` (reserved-seat
-  theatres, stadiums, timed-entry museums, concert halls). GA music clubs were
-  deliberately left `unknown` — door sales at a non-sold-out show are common
-  but not guaranteed, so they need a per-venue decision, not a category one.
+  Curation lives in migrations `009` and `012`–`013`, plus the `010` sweep.
+  As of 2026-08-07: 144 `none`, 15 `space_permitting`, 7 `always`, 2 `standby`,
+  ~109 `unknown` — 45 walk-in events on a typical night across 21 venues. The
+  NYC jazz rooms are essentially fully curated.
 
   **The worklist is `GET /venues/uncurated`**, not something you have to dig
   out of the logs. `reportUncuratedVenues()` still logs the same set after each
   pipeline run. Curating a venue is one `UPDATE`; the migration seeds are
   guarded with `COALESCE(walk_in_policy,'unknown') = 'unknown'` so re-running
   migrations never clobbers it.
+
+  **Do not curate a venue from its type.** The bar/restaurant tier looks
+  uniform and is not: Bill's Place is a bar-sized Harlem room that *requires*
+  reservations (~30 seats), and Dizzy's admits walk-ups only via a standby
+  list. Both would have been wrong under a blanket rule. Set a policy only
+  where the venue states one; `unknown` is the honest default.
+
+  **`door_price` is left NULL when the cover varies by night** — Birds is $15
+  midweek and $25 Fri/Sat, Club Room $25 and $35. A single number would
+  understate a weekend visit, and a price we show is a promise.
+
+  **Birdland is still uncurated after three attempts** and needs a phone call
+  (212-581-3080). Its FAQ documents that a ticket confirms a reservation and
+  that under-21s need table seating to sit at the bar, but never says whether
+  an adult can turn up without one. 12 events across its two rooms.
+
 - **`price_min` is null on most events**, so the budget filter has little to work
   with.
-- **`availability_tier` is `unknown` on a sizeable share** of events.
+
+- **`availability_tier` comes from Ticketmaster only.** SeatGeek supplies
+  *nothing* — all 1,197 SeatGeek-sourced events carry no tier, because
+  `mapSGAvailability` reads `stats.lowest_price`/`listing_count` and SeatGeek
+  returns `stats: {}` for club shows. SeatGeek describes the **resale** market,
+  which barely exists for a 500-cap room; no resale listings says nothing about
+  whether the box office has tickets.
+
+  Consequence: **general-admission music clubs cannot be curated for walk-ins.**
+  Bowery Ballroom, Irving Plaza, Elsewhere, Mercury Lounge and similar sit at
+  86% `unknown` availability, and whether you get in depends on the *show*, not
+  the venue. There is no current source that answers it. They stay `unknown` on
+  purpose — this is a blocked problem, not an open to-do.
+
+- **`runAvailabilityCheck` has never run in production.** It short-circuits when
+  `TICKETSDATA_USERNAME`/`_PASSWORD` are absent, logging
+  `ℹ️ TICKETSDATA credentials missing — skipping (tiers set at ingest)`. The
+  credentials are in local `.env.nowgo`; whether they are on Railway is
+  unconfirmed — check a deploy log for that line.
+
+  **Before enabling it:** `mapTier` returns `sold_out` when it finds zero
+  offers, so an empty or malformed TicketsData response is indistinguishable
+  from a genuinely sold-out show. `/events/tonight` filters out `sold_out` by
+  default, so one bad response silently drops an event and a bad batch empties
+  the feed. Tracked on ClickUp `86bba0bk0`.
 - **jazz-nyc.com writes the same room under several labels, and they drift.**
   The venue cell is a link, and **the `href` is the stable identity — the text
   is not**. Today's table has `Django(The)` (42 rows) and `The Django` (3) both
