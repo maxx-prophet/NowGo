@@ -4,9 +4,16 @@ import pool from "../db/index.js";
 import { startScheduler, runPipeline } from "./scheduler.js";
 import { getTravelTime, computeLeaveBy } from "./services/travel.js";
 import { rankEvents, RANKING_POOL } from "./services/ranking.js";
+import { fetchAlternatives } from "./services/alternatives.js";
+import { TONIGHT_WINDOW_SQL } from "./services/tonight-window.js";
 import { WALK_IN_SQL, fetchUncuratedVenues } from "./services/walk-in.js";
 import { renderUncuratedVenuesPage } from "./views/uncurated-venues.js";
 dotenv.config({ path: ".env.nowgo" });
+
+// Sold-out events are a footnote to the feed, not a second feed. Capped
+// independently of `limit` so a night with many of them cannot bloat the
+// response.
+const SOLD_OUT_LIMIT = 10;
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
@@ -129,10 +136,8 @@ app.get("/events/tonight", async (req, res) => {
           0 AS distance_m
         FROM events e
         LEFT JOIN venues v ON e.venue_id = v.venue_id
-        WHERE e.start_time > NOW() - interval '30 minutes'
-          AND e.start_time < (date_trunc('day', NOW() AT TIME ZONE 'America/New_York') + interval '1 day 4 hours') AT TIME ZONE 'America/New_York'
+        WHERE ${TONIGHT_WINDOW_SQL.trim()}
           AND e.availability_tier != 'cancelled'
-           ${includeSoldOut ? "" : "AND e.availability_tier != 'sold_out'"}
            ${walkInsOnly ? `AND ${WALK_IN_SQL}` : ""}
           AND ($5::text IS NULL OR e.segment = $5 OR ($5 = 'Jazz' AND e.genre = 'Jazz') OR ($5 = 'Comedy' AND e.genre = 'Comedy') OR ($5 = 'Theatre' AND e.segment = 'Arts & Theatre'))
           AND (v.geo_lat IS NULL OR (
@@ -160,10 +165,8 @@ app.get("/events/tonight", async (req, res) => {
           v.geo_lng     AS venue_lng
         FROM events e
         LEFT JOIN venues v ON e.venue_id = v.venue_id
-        WHERE e.start_time > NOW() - interval '30 minutes'
-          AND e.start_time < (date_trunc('day', NOW() AT TIME ZONE 'America/New_York') + interval '1 day 4 hours') AT TIME ZONE 'America/New_York'
+        WHERE ${TONIGHT_WINDOW_SQL.trim()}
           AND e.availability_tier != 'cancelled'
-           ${includeSoldOut ? "" : "AND e.availability_tier != 'sold_out'"}
            ${walkInsOnly ? `AND ${WALK_IN_SQL}` : ""}
           AND ($2::text IS NULL OR e.segment = $2 OR ($2 = 'Jazz' AND e.genre = 'Jazz') OR ($2 = 'Comedy' AND e.genre = 'Comedy') OR ($2 = 'Theatre' AND e.segment = 'Arts & Theatre'))
         ORDER BY e.start_time ASC
@@ -203,8 +206,47 @@ app.get("/events/tonight", async (req, res) => {
       filterable = filterable.filter((e) => e.walk_in === true);
     }
 
-    const ranked = rankEvents(filterable, { sort, surpriseMe, budget }).slice(0, surpriseMe ? 5 : limit);
-    res.json({ count: ranked.length, geo: hasGeo, mode: hasGeo ? mode : undefined, sort: surpriseMe ? "surprise_me" : sort, events: ranked });
+    const ranked = rankEvents(filterable, { sort, surpriseMe, budget });
+
+    // Sold-out events are ranked alongside everything else and then split out,
+    // rather than being dropped in SQL as they used to be. The feed stays a
+    // list of things you can actually go to; the app offers these behind a
+    // "show sold-out nearby" affordance instead of silently pretending the
+    // shows do not exist.
+    //
+    // Split BEFORE slicing to the limit, so sold-out events never consume feed
+    // slots. Under best_match they sort last anyway (tier score 0), but
+    // soonest/nearest/cheapest interleave them, which would otherwise hand back
+    // fewer than `limit` events a user can actually attend.
+    //
+    // include_sold_out=true keeps its original meaning — everything in one
+    // list — so existing callers of the public API are unaffected.
+    if (surpriseMe || includeSoldOut) {
+      const events = ranked.slice(0, surpriseMe ? 5 : limit);
+      return res.json({
+        count: events.length,
+        geo: hasGeo,
+        mode: hasGeo ? mode : undefined,
+        sort: surpriseMe ? "surprise_me" : sort,
+        events,
+      });
+    }
+
+    const events = ranked
+      .filter((e) => e.availability_tier !== "sold_out")
+      .slice(0, limit);
+    const soldOut = ranked
+      .filter((e) => e.availability_tier === "sold_out")
+      .slice(0, SOLD_OUT_LIMIT);
+
+    res.json({
+      count: events.length,
+      geo: hasGeo,
+      mode: hasGeo ? mode : undefined,
+      sort,
+      events,
+      sold_out_events: soldOut,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -225,6 +267,8 @@ app.get("/events/:id", async (req, res) => {
          v.name        AS venue_name,
          v.address     AS venue_address,
          v.neighborhood,
+         v.geo_lat     AS venue_lat,
+         v.geo_lng     AS venue_lng,
          CASE WHEN v.geo_lat IS NOT NULL THEN json_build_object('lat', v.geo_lat, 'lng', v.geo_lng) ELSE NULL END AS venue_geo
        FROM events e
        LEFT JOIN venues v ON e.venue_id = v.venue_id
@@ -232,7 +276,11 @@ app.get("/events/:id", async (req, res) => {
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: "Event not found" });
-    res.json(rows[0]);
+
+    // Only populated for a sold-out event; fetchAlternatives is a no-op
+    // otherwise and never rejects, so the detail response is never at risk.
+    const alternatives = await fetchAlternatives(rows[0]);
+    res.json({ ...rows[0], alternatives });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

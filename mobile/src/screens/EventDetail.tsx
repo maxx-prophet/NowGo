@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Linking, StyleSheet, ActivityIndicator } from "react-native";
-import type { AppNavProp, AppRouteProp, TravelMode } from "../types";
-import { fetchTravel } from "../api/nowgo";
+import type { AppNavProp, AppRouteProp, TravelMode, Event } from "../types";
+import { fetchTravel, fetchEvent } from "../api/nowgo";
 import { getAvailabilityBadge } from "../components/eventCardHelpers";
 import { useAnalytics } from "../services/analytics";
 
@@ -65,7 +65,7 @@ function openMapsDirections(
   }
 }
 
-export default function EventDetail({ route }: Props) {
+export default function EventDetail({ route, navigation }: Props) {
   const { event, userLat, userLng, initialMode = "transit" } = route.params;
 
   const hasGeo = userLat != null && userLng != null
@@ -77,7 +77,30 @@ export default function EventDetail({ route }: Props) {
   const [leaveBy, setLeaveBy] = useState<string | null | undefined>(event.leave_by);
   const [travelSource, setTravelSource] = useState<string | null>(event.travel_source ?? null);
   const [travelLoading, setTravelLoading] = useState(false);
+  const [alternatives, setAlternatives] = useState<Event[]>(event.alternatives ?? []);
   const analytics = useAnalytics();
+
+  const isSoldOut = event.availability_tier === "sold_out";
+
+  // The feed hands this screen its own event object, which carries no
+  // alternatives — only GET /events/:id computes them. So fetch them here, and
+  // only when they would actually be shown.
+  useEffect(() => {
+    if (!isSoldOut || (event.alternatives?.length ?? 0) > 0) return;
+    let cancelled = false;
+    fetchEvent(event.event_id)
+      .then((full) => {
+        if (!cancelled) setAlternatives(full.alternatives ?? []);
+      })
+      .catch((err) => {
+        // A failed suggestion lookup must not disturb the event itself.
+        analytics.captureError(err instanceof Error ? err : new Error(String(err)), {
+          event_id: event.event_id,
+          stage: "alternatives",
+        });
+      });
+    return () => { cancelled = true; };
+  }, [event.event_id, isSoldOut]);
 
   async function switchMode(newMode: TravelMode) {
     if (newMode === mode || !hasGeo) return;
@@ -184,8 +207,15 @@ export default function EventDetail({ route }: Props) {
 
       {/* CTA row */}
       <View style={styles.ctaRow}>
-        {/* Primary: tickets or walk-in note */}
-        {event.url ? (
+        {/* Primary: tickets or walk-in note.
+            A sold-out event gets neither — sending someone to a ticket page
+            for a show with no tickets is the dead end this screen exists to
+            replace. Directions still show: people do turn up for returns. */}
+        {isSoldOut ? (
+          <View style={styles.soldOutNote}>
+            <Text style={styles.soldOutNoteText}>Sold out · no tickets available</Text>
+          </View>
+        ) : event.url ? (
           <TouchableOpacity
             style={styles.ticketsBtn}
             onPress={() => { analytics.ticketsTapped(event.event_id, event.name); Linking.openURL(event.url!); }}
@@ -208,6 +238,48 @@ export default function EventDetail({ route }: Props) {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Alternatives — only for a sold-out event, and only if we found any. */}
+      {isSoldOut && alternatives.length > 0 ? (
+        <View style={styles.altSection}>
+          <Text style={styles.altHeading}>
+            Still open{event.neighborhood ? ` near ${event.neighborhood}` : " nearby"}
+          </Text>
+          {alternatives.map((alt) => (
+            <TouchableOpacity
+              key={alt.event_id}
+              style={styles.altRow}
+              activeOpacity={0.7}
+              onPress={() => {
+                analytics.alternativeTapped(event.event_id, alt.event_id);
+                navigation.push("EventDetail", {
+                  event: alt,
+                  userLat,
+                  userLng,
+                  initialMode: mode,
+                });
+              }}
+            >
+              <View style={styles.altMain}>
+                <Text style={styles.altName} numberOfLines={1}>{alt.name}</Text>
+                <Text style={styles.altMeta} numberOfLines={1}>
+                  {alt.venue_name ?? "Venue TBD"}
+                  {alt.neighborhood ? ` · ${alt.neighborhood}` : ""}
+                </Text>
+              </View>
+              <View style={styles.altRight}>
+                <Text style={styles.altTime}>
+                  {new Date(alt.start_time).toLocaleTimeString("en-US", {
+                    hour: "numeric", minute: "2-digit", hour12: true,
+                    timeZone: "America/New_York",
+                  })}
+                </Text>
+                {alt.walk_in ? <Text style={styles.altWalkIn}>🚶 Walk-in</Text> : null}
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : null}
     </ScrollView>
   );
 }
@@ -296,6 +368,69 @@ const styles = StyleSheet.create({
     color: "#93c5fd",
     fontSize: 15,
     fontWeight: "600",
+  },
+  soldOutNote: {
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    backgroundColor: "#141414",
+  },
+  soldOutNoteText: {
+    color: "#6B7280",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  altSection: {
+    marginTop: 26,
+  },
+  altHeading: {
+    color: "#9CA3AF",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+    marginBottom: 10,
+  },
+  altRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#1A1A1A",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    marginBottom: 8,
+  },
+  altMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  altName: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  altMeta: {
+    color: "#6B7280",
+    fontSize: 12,
+  },
+  altRight: {
+    alignItems: "flex-end",
+    flexShrink: 0,
+  },
+  altTime: {
+    color: "#9CA3AF",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  altWalkIn: {
+    color: "#93c5fd",
+    fontSize: 10,
+    fontWeight: "600",
+    marginTop: 2,
   },
   directionsBtn: {
     borderWidth: 1,

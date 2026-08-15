@@ -38,6 +38,21 @@ export function useAnalytics() {
     travelModeChanged: (eventId: string, mode: string) =>
       posthog?.capture("travel_mode_changed", { event_id: eventId, mode }),
 
+    // Feeds launch-ready metric #3, the "already sold out" incident rate.
+    // soldOutShown fires on every feed load that had any, so the denominator
+    // is every feed view rather than only the ones a user chose to expand.
+    soldOutShown: (soldOutCount: number, availableCount: number) =>
+      posthog?.capture("sold_out_shown", {
+        sold_out_count: soldOutCount,
+        available_count: availableCount,
+      }),
+
+    soldOutRevealed: (soldOutCount: number) =>
+      posthog?.capture("sold_out_revealed", { sold_out_count: soldOutCount }),
+
+    alternativeTapped: (fromEventId: string, toEventId: string) =>
+      posthog?.capture("alternative_tapped", { from_event_id: fromEventId, to_event_id: toEventId }),
+
     captureError: (error: Error, context?: Record<string, string | number | boolean | null>) =>
       posthog?.captureException(error, context),
   };

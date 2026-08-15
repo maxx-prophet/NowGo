@@ -25,6 +25,18 @@ export interface Event {
   hook?: string | null;
   venue_lat?: number | null;
   venue_lng?: number | null;
+  // Only sent by GET /events/:id, and only for a sold-out event: up to three
+  // things nearby tonight you can still get into. Absent everywhere else.
+  alternatives?: Event[] | null;
+}
+
+export interface TonightFeedResponse {
+  count: number;
+  events: Event[];
+  // Sold-out events are returned separately rather than mixed into `events`,
+  // so the feed stays a list of things you can actually go to. Absent when the
+  // request asked for surprise_me or include_sold_out.
+  sold_out_events?: Event[];
 }
 
 export interface FetchEventsParams {

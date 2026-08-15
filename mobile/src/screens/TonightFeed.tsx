@@ -38,6 +38,8 @@ interface Props {
 
 export default function TonightFeed({ navigation }: Props) {
   const [events, setEvents] = useState<Event[]>([]);
+  const [soldOutEvents, setSoldOutEvents] = useState<Event[]>([]);
+  const [soldOutExpanded, setSoldOutExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +66,11 @@ export default function TonightFeed({ navigation }: Props) {
       } else {
         setLoading(true);
         setEvents([]); // clear stale results so empty state shows during filter change
+        setSoldOutEvents([]);
       }
+      // Collapse on every load: a filter change makes the previous sold-out
+      // list stale, and leaving it open would show events that no longer match.
+      setSoldOutExpanded(false);
       setError(null);
       const data = await fetchTonightEvents({
         lat: coords?.latitude,
@@ -76,8 +82,11 @@ export default function TonightFeed({ navigation }: Props) {
         walkInsOnly,
       });
       const loaded = data.events ?? [];
+      const soldOut = data.sold_out_events ?? [];
       setEvents(loaded);
+      setSoldOutEvents(soldOut);
       analytics.feedLoaded(loaded.length, category);
+      if (soldOut.length > 0) analytics.soldOutShown(soldOut.length, loaded.length);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
       analytics.captureError(err instanceof Error ? err : new Error(String(err)), { segment: category });
@@ -267,6 +276,48 @@ export default function TonightFeed({ navigation }: Props) {
             )}
           </View>
         }
+        ListFooterComponent={
+          soldOutEvents.length > 0 ? (
+            <View style={styles.soldOutSection}>
+              <TouchableOpacity
+                style={styles.soldOutToggle}
+                onPress={() => {
+                  const next = !soldOutExpanded;
+                  setSoldOutExpanded(next);
+                  if (next) analytics.soldOutRevealed(soldOutEvents.length);
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={styles.soldOutRule} />
+                <Text style={styles.soldOutToggleText}>
+                  {soldOutExpanded
+                    ? "Hide sold-out"
+                    : `Show ${soldOutEvents.length} sold-out nearby`}
+                </Text>
+                <View style={styles.soldOutRule} />
+              </TouchableOpacity>
+
+              {soldOutExpanded
+                ? soldOutEvents.map((item, i) => (
+                    <EventCard
+                      key={item.event_id}
+                      event={item}
+                      index={i}
+                      onPress={() => {
+                        analytics.eventTapped(item.event_id, item.name, item.segment);
+                        navigation.navigate("EventDetail", {
+                          event: item,
+                          userLat: coords?.latitude ?? null,
+                          userLng: coords?.longitude ?? null,
+                          initialMode: mode,
+                        });
+                      }}
+                    />
+                  ))
+                : null}
+            </View>
+          ) : null
+        }
         ListHeaderComponent={
           events.length > 0 ? (
             <Text
@@ -453,6 +504,28 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   listContent: { paddingBottom: 32 },
+  soldOutSection: {
+    marginTop: 18,
+  },
+  soldOutToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingVertical: 6,
+  },
+  soldOutRule: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#1F2937",
+  },
+  soldOutToggleText: {
+    color: "#6B7280",
+    fontSize: 12,
+    fontWeight: "600",
+    flexShrink: 0,
+  },
   errorText: { color: "#EF4444", fontSize: 15, marginBottom: 16, textAlign: "center", paddingHorizontal: 32 },
   retryBtn: {
     paddingHorizontal: 24,

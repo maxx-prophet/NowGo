@@ -1,5 +1,5 @@
 import Constants from "expo-constants";
-import type { FetchEventsParams, Event } from "../types";
+import type { FetchEventsParams, Event, TonightFeedResponse } from "../types";
 
 const API_BASE: string =
   Constants.expoConfig?.extra?.apiUrl ?? "https://nowgo-production.up.railway.app";
@@ -29,7 +29,7 @@ export async function fetchTonightEvents(
     walkInsOnly = false,
     surpriseMe = false,
   }: FetchEventsParams = {}
-): Promise<{ events: Event[] }> {
+): Promise<TonightFeedResponse> {
   const params = new URLSearchParams({ limit: "50", radius_miles: String(radiusMiles) });
   if (lat != null && lng != null) {
     params.set("lat", String(lat));
