@@ -1,5 +1,6 @@
 import fs from "fs";
 import pool from "./index.js";
+import { neighborhoodFor } from "../src/services/neighborhoods.js";
 
 function parseNYCDateTime(dateStr, timeStr = '00:00:00') {
   // TM/SG give us local NYC time strings — we must convert to UTC correctly.
@@ -61,6 +62,17 @@ async function upsertVenue(client, event) {
   const venueName = await resolveVenueAlias(client, event.venue);
   const hasGeo = event.lat != null && event.lng != null;
 
+  // Never take the fetcher's word for the neighborhood. No source supplies a
+  // real one — Ticketmaster sends venue.city.name ("New York"), SeatGeek sends
+  // venue.extended_address ("New York, NY 10036"), jazz-nyc sends a borough —
+  // and because this UPSERT COALESCEs EXCLUDED first, those values used to
+  // overwrite a good derived neighborhood on every single ingest.
+  // The column is derived from coordinates now; see services/neighborhoods.js.
+  // Venues geocoded later are filled in by backfillNeighborhoods().
+  const derivedNeighborhood = hasGeo
+    ? neighborhoodFor(Number(event.lat), Number(event.lng))
+    : null;
+
   const { rows } = await client.query(
     `INSERT INTO venues (name, address, neighborhood, geo_lat, geo_lng)
      VALUES ($1, $2, $3, $4, $5)
@@ -74,7 +86,7 @@ async function upsertVenue(client, event) {
     [
       venueName,
       event.address ?? null,
-      event.neighborhood ?? null,
+      derivedNeighborhood,
       hasGeo ? event.lat : null,
       hasGeo ? event.lng : null,
     ]

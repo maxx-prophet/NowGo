@@ -4,6 +4,7 @@ import { fetchSeatGeek } from "./fetchers/seatgeek.js";
 import { fetchJazzNYC } from "./fetchers/jazz-nyc.js";
 import { ingestEvents } from "../db/ingest.js";
 import { geocodeVenues, backfillVenueWebsites } from "./services/geocode.js";
+import { backfillNeighborhoods } from "./services/neighborhoods.js";
 import { reportUncuratedVenues } from "./services/walk-in.js";
 import { runAvailabilityCheck } from "./services/availability.js";
 import { runGenreEnrichment } from "./services/genre-enrichment.js";
@@ -62,6 +63,17 @@ export async function runPipeline() {
       await backfillVenueWebsites();
     } catch (err) {
       console.error(`  ❌ Venue enrichment failed (continuing): ${err.message}`);
+    }
+
+    // Derives venues.neighborhood from coordinates. Must run after geocoding,
+    // since a venue with no coordinates cannot be placed. Its own try/catch
+    // because it is pure arithmetic over a DB read — it cannot fail for the
+    // external-API reasons the block above can, and should still run when
+    // geocoding failed on quota.
+    try {
+      await backfillNeighborhoods();
+    } catch (err) {
+      console.error(`  ❌ Neighborhood backfill failed (continuing): ${err.message}`);
     }
 
     // Names venues that still need a walk-in decision. Curation is manual, so
