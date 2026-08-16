@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   View, Text, TouchableOpacity, Modal, ActivityIndicator, StyleSheet,
 } from "react-native";
@@ -9,16 +9,25 @@ interface Props {
   visible: boolean;
   events: Event[];
   loading: boolean;
+  /** Dismissed without taking the pick — backdrop tap or hardware back. */
   onClose: () => void;
-  onNavigate: (event: Event) => void;
+  /** Took the pick. The parent closes the sheet and navigates. */
+  onAccept: (event: Event, index: number) => void;
+  /** Rejected this pick and asked for the next one. */
+  onSkip: (index: number) => void;
+  /**
+   * Which pick is showing. Owned by the parent rather than held here: the
+   * parent has to report it when the sheet is dismissed, and two copies of
+   * the same index drift as soon as `events` reloads while the sheet is open.
+   */
+  surpriseIndex: number;
 }
 
-export default function SurpriseSheet({ visible, events, loading, onClose, onNavigate }: Props) {
-  const [surpriseIndex, setSurpriseIndex] = useState(0);
-
-  useEffect(() => {
-    if (visible) setSurpriseIndex(0);
-  }, [visible, events]);
+export default function SurpriseSheet({
+  visible, events, loading, onClose, onAccept, onSkip, surpriseIndex,
+}: Props) {
+  // Guard against the parent's index outliving a shorter refreshed list.
+  const index = Math.min(surpriseIndex, Math.max(events.length - 1, 0));
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -40,19 +49,16 @@ export default function SurpriseSheet({ visible, events, loading, onClose, onNav
           ) : (
             <>
               <EventCard
-                event={events[surpriseIndex]}
+                event={events[index]}
                 index={0}
-                onPress={() => {
-                  onClose();
-                  onNavigate(events[surpriseIndex]);
-                }}
+                onPress={() => onAccept(events[index], index)}
               />
               <View style={styles.surpriseNav}>
                 <Text style={styles.surpriseCount}>
-                  {surpriseIndex + 1} of {events.length}
+                  {index + 1} of {events.length}
                 </Text>
-                {surpriseIndex < events.length - 1 && (
-                  <TouchableOpacity onPress={() => setSurpriseIndex((i) => i + 1)}>
+                {index < events.length - 1 && (
+                  <TouchableOpacity onPress={() => onSkip(index)}>
                     <Text style={styles.surpriseNext}>Try another →</Text>
                   </TouchableOpacity>
                 )}

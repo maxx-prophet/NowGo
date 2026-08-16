@@ -58,6 +58,9 @@ export default function TonightFeed({ navigation }: Props) {
   const [surpriseEvents, setSurpriseEvents] = useState<Event[]>([]);
   const [surpriseOpen, setSurpriseOpen] = useState(false);
   const [surpriseLoading, setSurpriseLoading] = useState(false);
+  // Which Surprise Me pick is on screen. Owned here rather than in the sheet
+  // so a dismissal can report the pick the user gave up on.
+  const [surpriseIndex, setSurpriseIndex] = useState(0);
 
   const load = useCallback(async (isRefresh = false) => {
     try {
@@ -106,6 +109,7 @@ export default function TonightFeed({ navigation }: Props) {
   async function loadSurprise() {
     setSurpriseLoading(true);
     setSurpriseOpen(true);
+    setSurpriseIndex(0);
     try {
       const data = await fetchTonightEvents({
         lat: coords?.latitude,
@@ -371,8 +375,23 @@ export default function TonightFeed({ navigation }: Props) {
         visible={surpriseOpen}
         events={surpriseEvents}
         loading={surpriseLoading}
-        onClose={() => setSurpriseOpen(false)}
-        onNavigate={(event) => {
+        surpriseIndex={surpriseIndex}
+        onClose={() => {
+          // Dismissed without taking a pick. Only counts as a verdict when
+          // there was something to reject — closing a still-loading or empty
+          // sheet says nothing about recommendation quality.
+          if (surpriseEvents.length > 0) {
+            analytics.surpriseMeDismissed(surpriseIndex, surpriseEvents.length);
+          }
+          setSurpriseOpen(false);
+        }}
+        onSkip={(index) => {
+          analytics.surpriseMeSkipped(index);
+          setSurpriseIndex(index + 1);
+        }}
+        onAccept={(event, index) => {
+          analytics.surpriseMeAccepted(event.event_id, index);
+          setSurpriseOpen(false);
           navigation.navigate("EventDetail", {
             event,
             userLat: coords?.latitude ?? null,

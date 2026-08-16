@@ -17,6 +17,24 @@ export function useAnalytics() {
     surpriseMeTapped: () =>
       posthog?.capture("surprise_me_tapped"),
 
+    // Launch-ready metric #5 is the Surprise Me skip rate, a proxy for
+    // recommendation quality. `surprise_me_tapped` alone cannot express it —
+    // it counts openings, not verdicts. These three record what the user
+    // actually decided, so the rate is skipped / (skipped + accepted).
+    //
+    // `pick_index` matters: rejecting the first pick and taking the third
+    // means the ranking is wrong, not that the inventory is bad.
+    surpriseMeAccepted: (eventId: string, pickIndex: number) =>
+      posthog?.capture("surprise_me_accepted", { event_id: eventId, pick_index: pickIndex }),
+
+    surpriseMeSkipped: (pickIndex: number) =>
+      posthog?.capture("surprise_me_skipped", { pick_index: pickIndex }),
+
+    // Closed without taking anything — a softer rejection than an explicit
+    // skip, and the one that says the whole set missed.
+    surpriseMeDismissed: (pickIndex: number, offered: number) =>
+      posthog?.capture("surprise_me_dismissed", { pick_index: pickIndex, offered }),
+
     directionsTapped: (eventId: string, mode: string) =>
       posthog?.capture("directions_tapped", { event_id: eventId, mode }),
 
