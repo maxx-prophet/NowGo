@@ -1,5 +1,14 @@
 # NowGo — Senior Solutions Engineering Review
 
+> **Correction (16 Aug 2026): this review's PostGIS claims are wrong.**
+> PostGIS was never enabled — `db/migrations/001_initial_schema.sql` explicitly comments
+> out `CREATE EXTENSION postgis`, because it is not available on all Railway instances.
+> Venue coordinates are plain `geo_lat`/`geo_lng` numerics and "near me" is a bounding-box
+> filter with arithmetic distance. **Code written against `ST_DWithin` or `ST_MakePoint`
+> will throw on its first query.** The rest of the review stands; treat every geo passage
+> below as describing a design that was proposed, not one that exists.
+
+
 *Reviewed: 2026-05-21*
 
 ---

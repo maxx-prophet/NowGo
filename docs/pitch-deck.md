@@ -1,5 +1,12 @@
 # NowGo — Investor Pitch Deck
-*Pre-Seed Round | May 2026*
+*Pre-Seed Round | May 2026 — build status revised 16 August 2026*
+
+> **Status note.** This deck was written in May 2026, before the mobile app existed. The
+> build status and architecture slides have been corrected below. The **ask and roadmap
+> slides have deliberately not been updated**: by this deck's own Series A checklist, a
+> pre-seed conversation needs 500–1,000 users and D30 retention data, and NowGo currently
+> has neither. Do not circulate this to investors until there is retention data to put in
+> it.
 
 ---
 
@@ -33,7 +40,7 @@ Every night, millions of New Yorkers ask this question. The answer is broken.
 
 # NowGo: One feed. Right now. You can make it.
 
-NowGo aggregates every event happening in NYC tonight — from Ticketmaster to SeatGeek to NYC Parks — normalizes pricing and availability, and tells you exactly when to leave based on your current location.
+NowGo aggregates events happening in NYC tonight — Ticketmaster, SeatGeek, and a curated jazz-club scraper — normalizes pricing and availability, and tells you exactly when to leave based on your current location.
 
 **Three things no one else does together:**
 
@@ -51,8 +58,8 @@ NowGo aggregates every event happening in NYC tonight — from Ticketmaster to S
 
 ```
 Ticketmaster API  ──┐
-SeatGeek API      ──┼──▶  Normalized Event Store (PostgreSQL + PostGIS)
-NYC Parks API     ──┘            │
+SeatGeek API      ──┼──▶  Normalized Event Store (PostgreSQL)
+Jazz NYC scraper  ──┘            │
                                  ▼
                      Geo-ranked feed by proximity
                                  │
@@ -67,7 +74,7 @@ NYC Parks API     ──┘            │
 ```
 
 **Key technical decisions already made:**
-- PostGIS for "events near me" — no separate geo service needed
+- Bounding-box geo filtering on indexed lat/lng — PostGIS is not available on Railway, so distance is computed arithmetically
 - Source-prefixed event IDs prevent duplication across sources
 - Availability snapshots log price + status changes over time
 - Railway-hosted PostgreSQL — scalable, managed, zero ops overhead
@@ -79,25 +86,32 @@ NYC Parks API     ──┘            │
 # What's Done. What's Next.
 
 ### Completed ✅
-- PostgreSQL + PostGIS event store on Railway
-- Full data pipeline: Ticketmaster, SeatGeek, NYC Parks
+- PostgreSQL event store on Railway; 6,436 events ingested since 2 June, ~150 per night
+- Data pipeline live on a four-times-daily schedule: Ticketmaster, SeatGeek, Jazz NYC
 - Normalized event schema (20+ fields: price, availability, geo, segment, genre)
-- Multi-source deduplication and price-fill logic (SeatGeek fills Ticketmaster gaps)
-- Availability snapshot history table
-- Project structure and development environment
+- Multi-source deduplication, venue alias merging, and price-fill logic
+- Express API server + node-cron scheduler — both shipped
+- Travel time engine — "leave by" is live and working
+- Surprise Score — live
+- **iOS app shipped to TestFlight; stable build running over a week**
+- Hand-curated walk-in policies across 168 NYC venues
+- PostHog analytics instrumented and confirmed reporting from production
 
 ### In Progress 🔧
-- API server (Express/Fastify)
-- Job scheduler for real-time data refresh
+- Recruiting the first real testers (currently zero)
+- Building the five launch-ready metrics in PostHog
 
 ### To Build 📋
-- Mobile app (React Native — iOS + Android)
-- Travel time engine ("leave by" calculation via Google Maps Distance Matrix)
-- Surprise Score algorithm
 - User accounts + preference learning
 - Push notifications
+- Android
 
-**Estimated time to demo-able MVP: 6–8 weeks**
+### Honest gaps ⚠️
+- **Price coverage is ~5%** — only 313 of 6,436 events carry a price, so budget filtering
+  has little to work on
+- **Availability is Ticketmaster-only** — SeatGeek returns no availability for club shows,
+  leaving general-admission venues largely unknown
+- **No users yet** — the product ships; nobody has been invited to it
 
 ---
 
@@ -144,7 +158,8 @@ NYC Parks API     ──┘            │
 # Three Revenue Layers
 
 **Phase 1 — Affiliate commissions** *(launch)*
-Earn 1–3% on ticket purchases completed through NowGo links. Ticketmaster and SeatGeek both run affiliate programs. Low friction to implement, immediate revenue at any meaningful user volume.
+Earn 1–3% on ticket purchases completed through NowGo links. Ticketmaster and SeatGeek both run affiliate programs.
+*Status: an early application was declined before any prototype existed and has not been retried. Both programs onboard individual publishers, so this is a re-application rather than a blocker — but it is not yet secured, and should not be presented as in hand.*
 
 **Phase 2 — Promoted listings** *(6–12 months)*
 Local venues and promoters pay to surface events to relevant users at the right moment. "You're 8 minutes away, show starts in 45." High intent = high CPM.
@@ -218,7 +233,7 @@ NYC nights are busier than pre-2020. Spontaneous, experience-first spending is u
 Ticketmaster, SeatGeek, and NYC Open Data have stable, documented APIs. Three years ago this data wasn't accessible at this quality.
 
 **3. Real-time geo infrastructure is cheap**
-PostGIS on Railway costs pennies. Google Maps Distance Matrix is pay-per-call. What would have required a geo engineering team in 2018 is now table stakes infrastructure.
+Indexed lat/lng and a bounding-box filter handle "near me" on ordinary Postgres. Google Maps Distance Matrix is pay-per-call. What would have required a geo engineering team in 2018 is now table stakes infrastructure.
 
 ---
 
