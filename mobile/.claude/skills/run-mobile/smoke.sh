@@ -4,8 +4,8 @@
 set -euo pipefail
 
 SCREENSHOT="${1:-/tmp/nowgo-sim.png}"
-BUNDLE_ID="com.anonymous.mobile"
-APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData/mobile-*/Build/Products/Debug-iphonesimulator/mobile.app -maxdepth 0 2>/dev/null | head -1)
+BUNDLE_ID="com.nowgo.app"
+APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData/NowGo-*/Build/Products/Debug-iphonesimulator/NowGo.app -maxdepth 0 2>/dev/null | head -1)
 
 # Ensure a booted simulator exists
 BOOTED=$(xcrun simctl list devices | grep Booted | head -1)
