@@ -74,12 +74,18 @@ export function leaveByResult(
   return { text: `Leave by ${formatTime(leaveBy)}`, color: "#22C55E", bold: false };
 }
 
+// `hasOrigin` is false when the feed was loaded without the user's coordinates
+// — browsing NYC from elsewhere. There is then no travel time to be missing, so
+// claiming one is unknown is wrong; the event's own timing is still known and
+// still useful. With an origin, a null travel time is a genuine gap (usually a
+// venue we never geocoded) and stays worth reporting.
 export function contextualLabelResult(
   startTime: string,
   travelMinutes: number | null | undefined,
-  now: Date = new Date()
+  now: Date = new Date(),
+  hasOrigin = true
 ): ContextualResult {
-  if (travelMinutes == null) {
+  if (travelMinutes == null && hasOrigin) {
     return { text: "Time unknown", color: "#60a5fa" };
   }
   const startDate = new Date(startTime);

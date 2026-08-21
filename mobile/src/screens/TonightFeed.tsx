@@ -71,6 +71,9 @@ export default function TonightFeed({ navigation }: Props) {
   const [surpriseIndex, setSurpriseIndex] = useState(0);
 
   const isFiltered = category !== "All" || budgetMax !== undefined || walkInsOnly;
+  // Whether this feed was loaded from a real position, which is what decides
+  // if a missing travel time is a gap or simply not applicable.
+  const hasOrigin = !!coords && !ignoreLocation;
 
   const load = useCallback(async (isRefresh = false) => {
     // Dropping the coordinates is what "Browse NYC anyway" does — the API
@@ -373,6 +376,7 @@ export default function TonightFeed({ navigation }: Props) {
                       key={item.event_id}
                       event={item}
                       index={i}
+                      hasOrigin={hasOrigin}
                       onPress={() => {
                         analytics.eventTapped(item.event_id, item.name, item.segment);
                         navigation.navigate("EventDetail", {
@@ -404,6 +408,7 @@ export default function TonightFeed({ navigation }: Props) {
           <EventCard
             event={item}
             index={index}
+            hasOrigin={hasOrigin}
             onPress={() => {
               analytics.eventTapped(item.event_id, item.name, item.segment);
               navigation.navigate("EventDetail", {

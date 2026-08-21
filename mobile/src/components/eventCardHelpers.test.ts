@@ -133,3 +133,25 @@ test("getAvailabilityBadge: sold_out + started keeps Sold Out", () => {
   const badge = getAvailabilityBadge("sold_out", startTime, now);
   assert.equal(badge.label, "🚫 Sold Out");
 });
+
+// Browsing NYC from outside the coverage area: there are no coordinates, so no
+// travel time exists to be missing. The event's own timing is unaffected.
+test("contextualLabelResult: without an origin, timing still shows instead of 'Time unknown'", () => {
+  const now = new Date("2026-08-21T18:00:00Z");
+  const startTime = new Date("2026-08-21T18:45:00Z").toISOString();
+  const r = contextualLabelResult(startTime, null, now, false);
+  assert.equal(r.text, "Starts in 45 min");
+});
+
+test("contextualLabelResult: with an origin, a null travel time is still a real gap", () => {
+  const now = new Date("2026-08-21T18:00:00Z");
+  const startTime = new Date("2026-08-21T18:45:00Z").toISOString();
+  const r = contextualLabelResult(startTime, null, now, true);
+  assert.equal(r.text, "Time unknown");
+});
+
+test("contextualLabelResult: an underway event reads as underway with no origin", () => {
+  const now = new Date("2026-08-21T21:00:00Z");
+  const startTime = new Date("2026-08-21T18:00:00Z").toISOString();
+  assert.equal(contextualLabelResult(startTime, null, now, false).text, "Underway");
+});

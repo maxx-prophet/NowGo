@@ -38,9 +38,12 @@ interface EventCardProps {
   event: Event;
   onPress: () => void;
   index?: number;
+  // False when the feed was loaded without the user's coordinates, so no
+  // travel time was ever computed and none should be reported as missing.
+  hasOrigin?: boolean;
 }
 
-export default function EventCard({ event, onPress, index = 0 }: EventCardProps) {
+export default function EventCard({ event, onPress, index = 0, hasOrigin = true }: EventCardProps) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(12)).current;
 
@@ -63,7 +66,7 @@ export default function EventCard({ event, onPress, index = 0 }: EventCardProps)
   const price = formatPrice(event.price_min, event.price_max, event.is_free);
   const timeStr = formatTime(event.start_time);
   const lb = leaveByResult(event.leave_by, event.availability_tier, now);
-  const ctx = contextualLabelResult(event.start_time, event.travel_minutes, now);
+  const ctx = contextualLabelResult(event.start_time, event.travel_minutes, now, hasOrigin);
 
   return (
     <Animated.View style={{ opacity, transform: [{ translateY }] }}>
