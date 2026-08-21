@@ -399,7 +399,7 @@ export default function TonightFeed({ navigation }: Props) {
               numberOfLines={1}
               ellipsizeMode="tail"
             >
-              {events.length} events tonight
+              {events.length} events
               {coords && !ignoreLocation ? " · near you" : " · NYC"}
             </Text>
           ) : null

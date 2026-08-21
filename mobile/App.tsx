@@ -71,7 +71,7 @@ function AppContent() {
       <EnvBadge />
       {preferences.onboardingComplete ? (
         <AppStack.Navigator screenOptions={appStackOpts}>
-          <AppStack.Screen name="TonightFeed" component={TonightFeed} options={{ title: "Tonight in NYC" }} />
+          <AppStack.Screen name="TonightFeed" component={TonightFeed} options={{ title: "Happening in NYC" }} />
           <AppStack.Screen name="EventDetail" component={EventDetail} options={{ title: "Event" }} />
           <AppStack.Screen name="Filters" component={FiltersModal} options={{ presentation: "modal", title: "Filters" }} />
         </AppStack.Navigator>
