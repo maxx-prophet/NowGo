@@ -14,6 +14,15 @@ export function useAnalytics() {
     categorySelected: (category: string) =>
       posthog?.capture("category_selected", { category }),
 
+    // How many installs land outside NYC. A tester who opens the app in another
+    // city sees an empty feed, and without this that reads in the funnel as
+    // disinterest rather than as the app having no inventory where they are.
+    outsideCoverageShown: (nationwideCount: number) =>
+      posthog?.capture("outside_coverage_shown", { nationwide_count: nationwideCount }),
+
+    browsedNycAnyway: () =>
+      posthog?.capture("browsed_nyc_anyway"),
+
     surpriseMeTapped: () =>
       posthog?.capture("surprise_me_tapped"),
 

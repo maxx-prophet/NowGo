@@ -11,6 +11,7 @@ import { fetchTonightEvents } from "../api/nowgo";
 import type { Event, AppNavProp } from "../types";
 import { useAnalytics } from "../services/analytics";
 import { useLocation } from "../hooks/useLocation";
+import { emptyReason } from "../services/coverage";
 
 const CATEGORIES = [
   "All", "Jazz", "Music", "Comedy", "Theatre",
@@ -51,6 +52,13 @@ export default function TonightFeed({ navigation }: Props) {
   const [sortBy, setSortBy] = useState<"best" | "soonest" | "nearest" | "cheapest">("best");
   const [walkInsOnly, setWalkInsOnly] = useState(false);
 
+  // Set once a located search comes back empty while events exist elsewhere:
+  // the user is outside the NYC coverage area. `ignoreLocation` is their way
+  // out — it re-runs the search with no coordinates, which the API treats as
+  // "everywhere" and so returns the NYC feed.
+  const [nationwideCount, setNationwideCount] = useState<number | null>(null);
+  const [ignoreLocation, setIgnoreLocation] = useState(false);
+
   const [modePickerOpen, setModePickerOpen] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const analytics = useAnalytics();
@@ -62,7 +70,12 @@ export default function TonightFeed({ navigation }: Props) {
   // so a dismissal can report the pick the user gave up on.
   const [surpriseIndex, setSurpriseIndex] = useState(0);
 
+  const isFiltered = category !== "All" || budgetMax !== undefined || walkInsOnly;
+
   const load = useCallback(async (isRefresh = false) => {
+    // Dropping the coordinates is what "Browse NYC anyway" does — the API
+    // treats an unlocated request as unbounded and returns the whole feed.
+    const searchCoords = ignoreLocation ? undefined : coords;
     try {
       if (isRefresh) {
         setRefreshing(true);
@@ -75,9 +88,10 @@ export default function TonightFeed({ navigation }: Props) {
       // list stale, and leaving it open would show events that no longer match.
       setSoldOutExpanded(false);
       setError(null);
+      setNationwideCount(null);
       const data = await fetchTonightEvents({
-        lat: coords?.latitude,
-        lng: coords?.longitude,
+        lat: searchCoords?.latitude,
+        lng: searchCoords?.longitude,
         mode,
         segment: category,
         budgetMax,
@@ -90,6 +104,23 @@ export default function TonightFeed({ navigation }: Props) {
       setSoldOutEvents(soldOut);
       analytics.feedLoaded(loaded.length, category);
       if (soldOut.length > 0) analytics.soldOutShown(soldOut.length, loaded.length);
+
+      // An empty located search has two very different causes — the user is
+      // outside NYC, or the night really is over. Repeating the search without
+      // the radius is the only thing that separates them, so it runs only in
+      // the one case that is ambiguous.
+      if (loaded.length === 0 && soldOut.length === 0 && searchCoords && !isFiltered) {
+        try {
+          const everywhere = await fetchTonightEvents({ mode, sortBy });
+          const count = (everywhere.events ?? []).length;
+          setNationwideCount(count);
+          if (count > 0) analytics.outsideCoverageShown(count);
+        } catch {
+          // Best effort. A failed probe leaves nationwideCount null, which
+          // resolves to the ordinary empty message rather than a guess.
+          setNationwideCount(null);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
       analytics.captureError(err instanceof Error ? err : new Error(String(err)), { segment: category });
@@ -97,7 +128,7 @@ export default function TonightFeed({ navigation }: Props) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [coords, category, mode, budgetMax, sortBy, walkInsOnly]);
+  }, [coords, category, mode, budgetMax, sortBy, walkInsOnly, ignoreLocation, isFiltered]);
 
   function clearFilters() {
     setCategory("All");
@@ -111,9 +142,13 @@ export default function TonightFeed({ navigation }: Props) {
     setSurpriseOpen(true);
     setSurpriseIndex(0);
     try {
+      // Same rule as the feed: once the user has chosen to browse NYC from
+      // elsewhere, Surprise Me must not quietly re-apply the radius and hand
+      // back an empty sheet.
+      const surpriseCoords = ignoreLocation ? undefined : coords;
       const data = await fetchTonightEvents({
-        lat: coords?.latitude,
-        lng: coords?.longitude,
+        lat: surpriseCoords?.latitude,
+        lng: surpriseCoords?.longitude,
         mode,
         surpriseMe: true,
       });
@@ -124,8 +159,6 @@ export default function TonightFeed({ navigation }: Props) {
       setSurpriseLoading(false);
     }
   }
-
-  const isFiltered = category !== "All" || budgetMax !== undefined || walkInsOnly;
 
   useEffect(() => { load(); }, [load]);
 
@@ -267,16 +300,49 @@ export default function TonightFeed({ navigation }: Props) {
                 </TouchableOpacity>
               </>
             ) : (
-              <>
-                <Text style={styles.emptyText}>
-                  {isFiltered ? "No events match your filters" : "No events tonight"}
-                </Text>
-                {isFiltered && (
-                  <TouchableOpacity style={styles.clearBtn} onPress={clearFilters}>
-                    <Text style={styles.clearBtnText}>Clear filters</Text>
-                  </TouchableOpacity>
-                )}
-              </>
+              (() => {
+                const reason = emptyReason({
+                  isFiltered,
+                  usedLocation: !ignoreLocation && !!coords,
+                  nationwideCount,
+                });
+
+                // Being outside the coverage area is not the same as the night
+                // being over, and saying "No events tonight" to someone in
+                // another city reads as a dead app rather than a limited one.
+                if (reason === "outside-coverage") {
+                  return (
+                    <>
+                      <Text style={styles.emptyTitle}>NowGo is NYC-only for now</Text>
+                      <Text style={styles.emptyText}>
+                        You're outside the area we cover, so there's nothing on near you tonight.
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.clearBtn}
+                        onPress={() => {
+                          analytics.browsedNycAnyway();
+                          setIgnoreLocation(true);
+                        }}
+                      >
+                        <Text style={styles.clearBtnText}>Browse NYC anyway</Text>
+                      </TouchableOpacity>
+                    </>
+                  );
+                }
+
+                return (
+                  <>
+                    <Text style={styles.emptyText}>
+                      {reason === "filtered" ? "No events match your filters" : "No events tonight"}
+                    </Text>
+                    {reason === "filtered" && (
+                      <TouchableOpacity style={styles.clearBtn} onPress={clearFilters}>
+                        <Text style={styles.clearBtnText}>Clear filters</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                );
+              })()
             )}
           </View>
         }
@@ -330,7 +396,7 @@ export default function TonightFeed({ navigation }: Props) {
               ellipsizeMode="tail"
             >
               {events.length} events tonight
-              {coords ? " · near you" : " · NYC"}
+              {coords && !ignoreLocation ? " · near you" : " · NYC"}
             </Text>
           ) : null
         }
@@ -558,6 +624,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 32,
   },
+  emptyTitle: { color: "#E5E7EB", fontSize: 17, fontWeight: "600", textAlign: "center", marginBottom: 6 },
   emptyText: { color: "#4B5563", fontSize: 15, textAlign: "center" },
   clearBtn: {
     marginTop: 16,
