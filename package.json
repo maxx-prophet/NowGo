@@ -10,7 +10,7 @@
     "fetch:jazz": "node src/fetchers/jazz-nyc.js",
     "availability": "node -e \"import('./src/services/availability.js').then(m => m.runAvailabilityCheck()).then(() => process.exit(0))\"",
     "hooks": "node -e \"import('./src/services/hook-generation.js').then(m => m.runHookGeneration()).then(() => process.exit(0))\"",
-    "test": "node --test src/fetchers/seatgeek.test.js src/fetchers/jazz-nyc.test.js src/services/geocode.test.js src/services/walk-in.test.js src/views/uncurated-venues.test.js src/services/availability.test.js db/migrations.test.js src/services/neighborhoods.test.js src/services/alternatives.test.js"
+    "test": "node --test src/fetchers/seatgeek.test.js src/fetchers/jazz-nyc.test.js src/services/geocode.test.js src/services/walk-in.test.js src/views/uncurated-venues.test.js src/services/availability.test.js db/migrations.test.js src/services/neighborhoods.test.js src/services/alternatives.test.js src/services/venue-type.test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",

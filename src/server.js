@@ -7,6 +7,7 @@ import { rankEvents, RANKING_POOL } from "./services/ranking.js";
 import { fetchAlternatives } from "./services/alternatives.js";
 import { TONIGHT_WINDOW_SQL } from "./services/tonight-window.js";
 import { WALK_IN_SQL, fetchUncuratedVenues } from "./services/walk-in.js";
+import { NOT_ATTRACTION_SQL } from "./services/venue-type.js";
 import { renderUncuratedVenuesPage } from "./views/uncurated-venues.js";
 dotenv.config({ path: ".env.nowgo" });
 
@@ -97,6 +98,8 @@ app.get("/venues/uncurated", async (req, res) => {
 //   budget          — max price user wants to pay (used in best_match scoring)
 //   surprise_me     — true: return top 5 available events starting in 30–90 min
 //   include_sold_out — true: include sold-out events (default false)
+//   include_attractions — true: include museums and other timed-entry venues,
+//                     which are excluded by default (see services/venue-type.js)
 
 app.get("/events/tonight", async (req, res) => {
   const lat = parseFloat(req.query.lat);
@@ -113,6 +116,7 @@ app.get("/events/tonight", async (req, res) => {
   const hasGeo = !isNaN(lat) && !isNaN(lng);
   const budgetMax = req.query.budget_max != null ? parseFloat(req.query.budget_max) : null;
   const walkInsOnly = req.query.walk_ins_only === "true";
+  const includeAttractions = req.query.include_attractions === "true";
 
   try {
     let query, params;
@@ -139,6 +143,7 @@ app.get("/events/tonight", async (req, res) => {
         WHERE ${TONIGHT_WINDOW_SQL.trim()}
           AND e.availability_tier != 'cancelled'
            ${walkInsOnly ? `AND ${WALK_IN_SQL}` : ""}
+           ${includeAttractions ? "" : `AND ${NOT_ATTRACTION_SQL}`}
           AND ($5::text IS NULL OR e.segment = $5 OR ($5 = 'Jazz' AND e.genre = 'Jazz') OR ($5 = 'Comedy' AND e.genre = 'Comedy') OR ($5 = 'Theatre' AND e.segment = 'Arts & Theatre'))
           AND (v.geo_lat IS NULL OR (
             abs(v.geo_lat - $1) < ($3 / 111.0)
@@ -168,6 +173,7 @@ app.get("/events/tonight", async (req, res) => {
         WHERE ${TONIGHT_WINDOW_SQL.trim()}
           AND e.availability_tier != 'cancelled'
            ${walkInsOnly ? `AND ${WALK_IN_SQL}` : ""}
+           ${includeAttractions ? "" : `AND ${NOT_ATTRACTION_SQL}`}
           AND ($2::text IS NULL OR e.segment = $2 OR ($2 = 'Jazz' AND e.genre = 'Jazz') OR ($2 = 'Comedy' AND e.genre = 'Comedy') OR ($2 = 'Theatre' AND e.segment = 'Arts & Theatre'))
         ORDER BY e.start_time ASC
         LIMIT $1`;
