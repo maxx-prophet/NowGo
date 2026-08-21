@@ -22,6 +22,12 @@ export interface Event {
   travel_source?: string | null;
   surprise_score?: number | null;
   walk_in?: boolean | null;
+  // The curated venue policy behind `walk_in`, which is only a boolean and so
+  // cannot tell "just turn up" apart from "if there's room". door_price is the
+  // walk-in price, not the advance one, and is deliberately null when the
+  // cover varies by night. Arrives as a numeric string from Postgres.
+  walk_in_policy?: string | null;
+  door_price?: string | number | null;
   hook?: string | null;
   venue_lat?: number | null;
   venue_lng?: number | null;

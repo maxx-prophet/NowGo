@@ -4,11 +4,20 @@ import type { AppNavProp, AppRouteProp, TravelMode, Event } from "../types";
 import { fetchTravel, fetchEvent } from "../api/nowgo";
 import { getAvailabilityBadge } from "../components/eventCardHelpers";
 import { useAnalytics } from "../services/analytics";
+import { walkInNotice } from "../services/walkIn";
 
 interface Props {
   route: AppRouteProp<"EventDetail">;
   navigation: AppNavProp<"EventDetail">;
 }
+
+// Walk-ins that can be relied on read green; conditional ones amber; a venue
+// that requires a ticket is stated plainly rather than warned about.
+const WALK_IN_TONE = {
+  good:  { borderColor: "#166534", backgroundColor: "#0B2015" },
+  mixed: { borderColor: "#854D0E", backgroundColor: "#231A08" },
+  plain: { borderColor: "#2A2A2A", backgroundColor: "#161616" },
+} as const;
 
 const MODES: { key: TravelMode; emoji: string; label: string }[] = [
   { key: "transit", emoji: "🚇", label: "Transit" },
@@ -205,6 +214,23 @@ export default function EventDetail({ route, navigation }: Props) {
         </View>
       ) : null}
 
+      {/* What the venue actually said about turning up without a ticket.
+          Driven by the curated venue policy, never by the absence of a ticket
+          URL: a missing link says nothing about whether the door is open. An
+          uncurated venue renders nothing rather than guessing either way. */}
+      {(() => {
+        const notice = walkInNotice(event.walk_in_policy, event.door_price);
+        if (!notice || isSoldOut) return null;
+        return (
+          <View style={[styles.walkInCard, WALK_IN_TONE[notice.tone]]}>
+            <Text style={styles.walkInTitle}>{notice.title}</Text>
+            {notice.detail ? (
+              <Text style={styles.walkInDetail}>{notice.detail}</Text>
+            ) : null}
+          </View>
+        );
+      })()}
+
       {/* CTA row */}
       <View style={styles.ctaRow}>
         {/* Primary: tickets or walk-in note.
@@ -222,11 +248,7 @@ export default function EventDetail({ route, navigation }: Props) {
           >
             <Text style={styles.ticketsBtnText}>Get Tickets →</Text>
           </TouchableOpacity>
-        ) : (
-          <View style={styles.walkInNote}>
-            <Text style={styles.walkInText}>Walk-in · No ticket needed</Text>
-          </View>
-        )}
+        ) : null}
 
         {/* Secondary: directions — shows if event has an address or coords */}
         {(event.venue_lat != null || event.venue_address != null) && (
@@ -356,6 +378,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
+  walkInCard: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+  },
+  walkInTitle: { color: "#E5E7EB", fontSize: 15, fontWeight: "600" },
+  walkInDetail: { color: "#9CA3AF", fontSize: 13, marginTop: 3 },
   walkInNote: {
     borderWidth: 1,
     borderColor: "#2A2A2A",
