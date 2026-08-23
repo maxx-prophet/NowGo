@@ -41,8 +41,19 @@ throw on its first query.
 is why the feed looks empty late at night — it is usually correct behavior, not
 a bug.
 
-**`POST /pipeline/run` is unauthenticated.** Anyone can trigger the fetchers and
-burn third-party API quota. Should be gated before any public launch.
+**`POST /pipeline/run` requires `Authorization: Bearer $PIPELINE_TOKEN`.** It
+**fails closed**: with `PIPELINE_TOKEN` unset the route answers 503 rather than
+reverting to open, so a missing env var is loud instead of silently
+reintroducing the hole. The token lives in `.env.nowgo` and must also be set on
+Railway. Scheduled ingestion is unaffected — `src/scheduler.js` calls
+`runPipeline()` in process and never goes through HTTP.
+
+Triggering it by hand:
+
+```
+curl -X POST https://nowgo-production.up.railway.app/pipeline/run \
+  -H "Authorization: Bearer $PIPELINE_TOKEN"
+```
 
 ## The pipeline
 
@@ -216,7 +227,9 @@ API `id`.** Extracting the ID from the URL and querying the API can produce fals
 ## Secrets and env
 
 - **`.env.nowgo`** (repo root, gitignored) holds every backend secret:
-  `DATABASE_URL`, `TM_API_KEY`, `SEATGEEK_*`, `GOOGLE_MAPS_KEY`, `ANTHROPIC_API_KEY`.
+  `DATABASE_URL`, `TM_API_KEY`, `SEATGEEK_*`, `GOOGLE_MAPS_KEY`,
+  `ANTHROPIC_API_KEY`, `PIPELINE_TOKEN`, and the `ASC_*` App Store Connect
+  values.
   Load with `set -a; . ./.env.nowgo; set +a`.
 - **`mobile/.env`** (gitignored) holds `POSTHOG_KEY`.
 - Never put tokens in tracked files. GitHub push protection has blocked this repo

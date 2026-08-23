@@ -8,6 +8,7 @@ import { fetchAlternatives } from "./services/alternatives.js";
 import { TONIGHT_WINDOW_SQL } from "./services/tonight-window.js";
 import { WALK_IN_SQL, fetchUncuratedVenues } from "./services/walk-in.js";
 import { NOT_ATTRACTION_SQL } from "./services/venue-type.js";
+import { checkPipelineToken } from "./services/pipeline-auth.js";
 import { renderUncuratedVenuesPage } from "./views/uncurated-venues.js";
 dotenv.config({ path: ".env.nowgo" });
 
@@ -37,7 +38,19 @@ app.get("/health", (req, res) => {
 
 // ─── POST /pipeline/run ───────────────────────────────────────────────────────
 
+// Requires `Authorization: Bearer $PIPELINE_TOKEN`. Every call spends
+// Ticketmaster, SeatGeek and Google Places quota, so an open route was a
+// standing invitation to run up the bill.
+//
+// Refuses when PIPELINE_TOKEN is unset rather than falling back to open. The
+// scheduler calls runPipeline() in process, so scheduled ingestion is
+// unaffected either way — only the manual trigger needs the token.
 app.post("/pipeline/run", async (req, res) => {
+  const auth = checkPipelineToken(req.get("authorization"), process.env.PIPELINE_TOKEN);
+  if (!auth.ok) {
+    console.warn(`\u26a0\ufe0f  Rejected /pipeline/run (${auth.status}) from ${req.ip}`);
+    return res.status(auth.status).json({ error: auth.error });
+  }
   res.json({ status: "started", ts: new Date().toISOString() });
   runPipeline(); // runs async in background
 });
@@ -62,8 +75,8 @@ app.get("/sources", async (req, res) => {
 // log is not somewhere anyone checks daily, so the reminder went unread.
 //
 // Read-only on purpose. Writing a policy from here would need auth — the whole
-// walk-ins filter is downstream of this data, and this service already has one
-// unauthenticated mutating endpoint (POST /pipeline/run) too many.
+// walk-ins filter is downstream of this data, and POST /pipeline/run is the
+// only mutating route, now behind PIPELINE_TOKEN.
 //
 // ?format=json returns the rows instead of the page.
 
