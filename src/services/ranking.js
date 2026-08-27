@@ -29,9 +29,15 @@ export function rankEvents(events, { sort = "best_match", surpriseMe = false, bu
   const nowMs = now.getTime();
 
   if (surpriseMe) {
-    const VERIFIED = new Set(["available", "scarce"]);
+    // Suggest anything the feed itself would show. Requiring a *verified* tier
+    // here emptied Surprise Me nearly every night: only Ticketmaster ever sets
+    // one, so jazz-nyc and SeatGeek events — most of the inventory — all carry
+    // `unknown` and were filtered out wholesale. Ordering still prefers a
+    // verified tier via scoreEvent, so a show we know has tickets goes first
+    // when one exists.
+    const UNGETTABLE = new Set(["sold_out", "cancelled"]);
     return events
-      .filter(e => VERIFIED.has(e.availability_tier))
+      .filter(e => !UNGETTABLE.has(e.availability_tier))
       .filter(e => {
         const mins = (new Date(e.start_time).getTime() - nowMs) / 60000;
         return mins >= 0 && mins <= 240;

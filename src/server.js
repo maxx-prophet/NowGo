@@ -109,7 +109,9 @@ app.get("/venues/uncurated", async (req, res) => {
 //   buffer_minutes  — minutes of buffer before event start, default 10
 //   sort            — best_match (default) | soonest | nearest | cheapest | surprise
 //   budget          — max price user wants to pay (used in best_match scoring)
-//   surprise_me     — true: return top 5 available events starting in 30–90 min
+//   surprise_me     — true: up to 5 picks starting within the next 4 hours,
+//                     best first (30–90 min out scores highest); sold-out and
+//                     cancelled are excluded, an unknown tier is not
 //   include_sold_out — true: include sold-out events (default false)
 //   include_attractions — true: include museums and other timed-entry venues,
 //                     which are excluded by default (see services/venue-type.js)
