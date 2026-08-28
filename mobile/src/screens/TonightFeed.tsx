@@ -12,18 +12,29 @@ import type { Event, AppNavProp } from "../types";
 import { useAnalytics } from "../services/analytics";
 import { useLocation } from "../hooks/useLocation";
 import { emptyReason } from "../services/coverage";
+import {
+  ALL_CATEGORIES,
+  NO_BUDGET,
+  toggleCategory,
+  toggleBudget,
+  isFiltered as computeIsFiltered,
+  type BudgetMax,
+} from "../services/filters";
 
 const CATEGORIES = [
   "All", "Jazz", "Music", "Comedy", "Theatre",
   "Sports", "Art", "Outdoors", "Film", "Talks", "Nightlife", "Family",
 ];
 
-const BUDGETS: { label: string; value: number | null }[] = [
+// "Any" leads, the way "All" leads the categories — it is the way out of a
+// price filter, and at the end of the row it sat off-screen behind the
+// transport dropdown where nobody could find it.
+const BUDGETS: { label: string; value: BudgetMax }[] = [
+  { label: "Any", value: NO_BUDGET },
   { label: "Free", value: 0 },
   { label: "<$25", value: 25 },
   { label: "<$50", value: 50 },
   { label: "<$100", value: 100 },
-  { label: "Any", value: null },
 ];
 
 const MODES = [
@@ -46,8 +57,8 @@ export default function TonightFeed({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const { coords, permissionStatus } = useLocation();
 
-  const [category, setCategory] = useState("All");
-  const [budgetMax, setBudgetMax] = useState<number | null | undefined>(undefined);
+  const [category, setCategory] = useState(ALL_CATEGORIES);
+  const [budgetMax, setBudgetMax] = useState<BudgetMax>(NO_BUDGET);
   const [mode, setMode] = useState<"transit" | "walk" | "drive">("transit");
   const [sortBy, setSortBy] = useState<"best" | "soonest" | "nearest" | "cheapest">("best");
   const [walkInsOnly, setWalkInsOnly] = useState(false);
@@ -70,7 +81,7 @@ export default function TonightFeed({ navigation }: Props) {
   // so a dismissal can report the pick the user gave up on.
   const [surpriseIndex, setSurpriseIndex] = useState(0);
 
-  const isFiltered = category !== "All" || budgetMax !== undefined || walkInsOnly;
+  const isFiltered = computeIsFiltered({ category, budgetMax, walkInsOnly });
   // Whether this feed was loaded from a real position, which is what decides
   // if a missing travel time is a gap or simply not applicable.
   const hasOrigin = !!coords && !ignoreLocation;
@@ -134,8 +145,8 @@ export default function TonightFeed({ navigation }: Props) {
   }, [coords, category, mode, budgetMax, sortBy, walkInsOnly, ignoreLocation, isFiltered]);
 
   function clearFilters() {
-    setCategory("All");
-    setBudgetMax(undefined);
+    setCategory(ALL_CATEGORIES);
+    setBudgetMax(NO_BUDGET);
     setWalkInsOnly(false);
     setSortBy("best");
   }
@@ -178,7 +189,11 @@ export default function TonightFeed({ navigation }: Props) {
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[styles.chip, category === item && styles.chipActive]}
-              onPress={() => { setCategory(item); analytics.categorySelected(item); }}
+              onPress={() => {
+                const next = toggleCategory(category, item);
+                setCategory(next);
+                analytics.categorySelected(next);
+              }}
             >
               <Text style={[styles.chipText, category === item && styles.chipTextActive]}>
                 {item}
@@ -211,7 +226,11 @@ export default function TonightFeed({ navigation }: Props) {
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={[styles.budgetChip, budgetMax === item.value && styles.budgetChipActive]}
-                onPress={() => { setBudgetMax(item.value); analytics.budgetFilterApplied(item.value); }}
+                onPress={() => {
+                  const next = toggleBudget(budgetMax, item.value);
+                  setBudgetMax(next);
+                  analytics.budgetFilterApplied(next ?? null);
+                }}
               >
                 <Text style={[styles.budgetChipText, budgetMax === item.value && styles.budgetChipTextActive]}>
                   {item.label}
