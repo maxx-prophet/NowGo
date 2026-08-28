@@ -9,11 +9,25 @@ const { withDangerousMod } = ConfigPlugins;
 // analytics SDKs (PostHog). This plugin writes PrivacyInfo.xcprivacy into the
 // generated native iOS project during prebuild / EAS build.
 //
+// The three collected types below must stay in step with the App Privacy
+// answers in App Store Connect. They disagreed once: the manifest declared
+// location alone while the questionnaire described PostHog as well, and a
+// binary that claims less than the listing is the mismatch Apple flags.
+//
+// NSPrivacyCollectedDataTypePreciseLocation: coords used for event proximity
+//   and travel time. App functionality, not linked, not tracking.
+// NSPrivacyCollectedDataTypeDeviceID: PostHog's anonymous device id. There is
+//   no login and no identify() call anywhere in the app, so nothing ties it to
+//   a person — that is what Linked=false is asserting.
+// NSPrivacyCollectedDataTypeProductInteraction: the 15 analytics events in
+//   src/services/analytics.ts (feed_loaded, surprise_me_tapped, and the rest).
+//
+// NSPrivacyTracking stays false: none of this is shared with a data broker or
+// joined to third-party data, so no ATT prompt is required.
+//
 // NSPrivacyAccessedAPICategoryUserDefaults: AsyncStorage (and PostHog's device
 //   ID persistence) read/write NSUserDefaults. Reason CA92.1 = "access info
 //   from the same app that wrote it."
-// NSPrivacyCollectedDataTypePreciseLocation: location coords used for event
-//   proximity and travel time — not linked to identity, not for tracking.
 //
 // Verify reason codes against https://developer.apple.com/documentation/bundleresources/privacy-manifest-files
 // before submitting — Apple occasionally adds new required reasons.
@@ -35,6 +49,30 @@ const PRIVACY_MANIFEST = `<?xml version="1.0" encoding="UTF-8"?>
       <key>NSPrivacyCollectedDataTypePurposes</key>
       <array>
         <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+      </array>
+    </dict>
+    <dict>
+      <key>NSPrivacyCollectedDataType</key>
+      <string>NSPrivacyCollectedDataTypeDeviceID</string>
+      <key>NSPrivacyCollectedDataTypeLinked</key>
+      <false/>
+      <key>NSPrivacyCollectedDataTypeTracking</key>
+      <false/>
+      <key>NSPrivacyCollectedDataTypePurposes</key>
+      <array>
+        <string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+      </array>
+    </dict>
+    <dict>
+      <key>NSPrivacyCollectedDataType</key>
+      <string>NSPrivacyCollectedDataTypeProductInteraction</string>
+      <key>NSPrivacyCollectedDataTypeLinked</key>
+      <false/>
+      <key>NSPrivacyCollectedDataTypeTracking</key>
+      <false/>
+      <key>NSPrivacyCollectedDataTypePurposes</key>
+      <array>
+        <string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
       </array>
     </dict>
   </array>
