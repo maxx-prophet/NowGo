@@ -9,6 +9,7 @@ import { TONIGHT_WINDOW_SQL } from "./services/tonight-window.js";
 import { WALK_IN_SQL, fetchUncuratedVenues } from "./services/walk-in.js";
 import { NOT_ATTRACTION_SQL } from "./services/venue-type.js";
 import { checkPipelineToken } from "./services/pipeline-auth.js";
+import { withAttribution, withAttributionAll } from "./services/attribution.js";
 import { renderUncuratedVenuesPage } from "./views/uncurated-venues.js";
 dotenv.config({ path: ".env.nowgo" });
 
@@ -195,7 +196,13 @@ app.get("/events/tonight", async (req, res) => {
       params = [RANKING_POOL, segment];
     }
 
-    const { rows } = await pool.query(query, params);
+    const { rows: raw } = await pool.query(query, params);
+
+    // Credit the sources that get no link of their own — jazz-nyc events carry
+    // the venue website as their url, so without this nothing names the source.
+    // Applied here, before ranking and splitting, so every path out of this
+    // handler carries it: feed, sold-out list and surprise picks alike.
+    const rows = withAttributionAll(raw);
 
     // Enrich with travel time when user location is known
     let filterable = hasGeo
@@ -301,7 +308,10 @@ app.get("/events/:id", async (req, res) => {
     // Only populated for a sold-out event; fetchAlternatives is a no-op
     // otherwise and never rejects, so the detail response is never at risk.
     const alternatives = await fetchAlternatives(rows[0]);
-    res.json({ ...rows[0], alternatives });
+    res.json({
+      ...withAttribution(rows[0]),
+      alternatives: withAttributionAll(alternatives),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

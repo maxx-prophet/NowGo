@@ -302,6 +302,27 @@ export default function EventDetail({ route, navigation }: Props) {
           ))}
         </View>
       ) : null}
+
+      {/* Source credit. Only rendered when the API says a credit is owed —
+          Ticketmaster and SeatGeek events link to their own pages, so the
+          "Get Tickets" button is already their attribution. jazz-nyc events
+          carry the venue's website instead, which means without this line
+          nothing on the screen says where the listing came from, and no tap
+          ever reaches them. */}
+      {event.source_name && event.source_url ? (
+        <TouchableOpacity
+          style={styles.creditRow}
+          activeOpacity={0.7}
+          onPress={() => {
+            analytics.sourceCreditTapped(event.source ?? "unknown", event.event_id);
+            Linking.openURL(event.source_url!);
+          }}
+        >
+          <Text style={styles.creditText}>
+            Listing by <Text style={styles.creditLink}>{event.source_name}</Text>
+          </Text>
+        </TouchableOpacity>
+      ) : null}
     </ScrollView>
   );
 }
@@ -399,6 +420,20 @@ const styles = StyleSheet.create({
     color: "#93c5fd",
     fontSize: 15,
     fontWeight: "600",
+  },
+  creditRow: {
+    marginTop: 28,
+    marginBottom: 8,
+    paddingHorizontal: 20,
+    alignItems: "center",
+  },
+  creditText: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
+  creditLink: {
+    color: "#9CA3AF",
+    textDecorationLine: "underline",
   },
   soldOutNote: {
     borderWidth: 1,

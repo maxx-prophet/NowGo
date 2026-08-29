@@ -23,6 +23,12 @@ export function useAnalytics() {
     browsedNycAnyway: () =>
       posthog?.capture("browsed_nyc_anyway"),
 
+    // Taps on a listing source's credit line. We promised jazz-nyc.com the
+    // click it never gets today, so this is the number we can actually report
+    // back to them rather than asserting the credit is "visible".
+    sourceCreditTapped: (source: string, eventId: string) =>
+      posthog?.capture("source_credit_tapped", { source, event_id: eventId }),
+
     surpriseMeTapped: () =>
       posthog?.capture("surprise_me_tapped"),
 

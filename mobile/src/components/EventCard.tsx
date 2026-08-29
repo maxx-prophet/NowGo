@@ -91,6 +91,15 @@ export default function EventCard({ event, onPress, index = 0, hasOrigin = true 
                 {`"${event.hook}"`}
               </Text>
             ) : null}
+            {/* Source credit, set by the API only where one is owed. Not
+                tappable here — the whole card is one tap target, and hijacking
+                part of it would cost the user the event they were reaching
+                for. The tappable credit lives on the detail screen. */}
+            {event.source_name ? (
+              <Text style={styles.credit} numberOfLines={1}>
+                Listing by {event.source_name}
+              </Text>
+            ) : null}
           </View>
         </View>
 
@@ -181,6 +190,11 @@ const styles = StyleSheet.create({
   },
   venueMuted: {
     color: "#4B5563",
+  },
+  credit: {
+    color: "#4B5563",
+    fontSize: 11,
+    marginBottom: 4,
   },
   hook: {
     color: "#9CA3AF",
