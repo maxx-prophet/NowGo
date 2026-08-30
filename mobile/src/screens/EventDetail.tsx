@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Linking, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Linking, Share, StyleSheet, ActivityIndicator } from "react-native";
 import type { AppNavProp, AppRouteProp, TravelMode, Event } from "../types";
 import { fetchTravel, fetchEvent } from "../api/nowgo";
 import { getAvailabilityBadge } from "../components/eventCardHelpers";
 import { useAnalytics } from "../services/analytics";
 import { walkInNotice } from "../services/walkIn";
+import { shareMessage } from "../services/share";
 
 interface Props {
   route: AppRouteProp<"EventDetail">;
@@ -259,6 +260,26 @@ export default function EventDetail({ route, navigation }: Props) {
             <Text style={styles.directionsBtnText}>📍 Directions</Text>
           </TouchableOpacity>
         )}
+
+        {/* Share. The leave-by time is computed at tap, not at render, because
+            the clock keeps running while this screen is open and a stale
+            "leave by" is worse than none. Analytics fires on tap rather than
+            on completion — iOS does not reliably report which app was chosen,
+            and a cancelled share still says the event was worth sending. */}
+        <TouchableOpacity
+          style={styles.shareBtn}
+          onPress={async () => {
+            analytics.eventShared(event.event_id, event.availability_tier);
+            try {
+              await Share.share({ message: shareMessage(event, leaveBy) });
+            } catch {
+              // A failed or dismissed share sheet is not worth interrupting
+              // anyone over — there is nothing for the user to fix.
+            }
+          }}
+        >
+          <Text style={styles.shareBtnText}>↗ Share</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Alternatives — only for a sold-out event, and only if we found any. */}
@@ -497,6 +518,19 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "600",
     marginTop: 2,
+  },
+  shareBtn: {
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    backgroundColor: "#1A1A1A",
+  },
+  shareBtnText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
   },
   directionsBtn: {
     borderWidth: 1,

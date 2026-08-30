@@ -23,6 +23,13 @@ export function useAnalytics() {
     browsedNycAnyway: () =>
       posthog?.capture("browsed_nyc_anyway"),
 
+    // A share is the strongest signal the app produced something worth
+    // telling someone about — and during friends-and-family it is the
+    // mechanism by which one tester recruits the next. Carries the tier so a
+    // share of a sold-out show (which sends no link) is distinguishable.
+    eventShared: (eventId: string, availabilityTier: string) =>
+      posthog?.capture("event_shared", { event_id: eventId, availability_tier: availabilityTier }),
+
     // Taps on a listing source's credit line. We promised jazz-nyc.com the
     // click it never gets today, so this is the number we can actually report
     // back to them rather than asserting the credit is "visible".
