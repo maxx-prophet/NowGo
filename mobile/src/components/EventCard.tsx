@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from "react";
 import {
-  View, Text, TouchableOpacity, StyleSheet, Animated,
+  View, Text, TouchableOpacity, StyleSheet, Animated, useWindowDimensions,
 } from "react-native";
 import type { Event } from "../types";
 import {
@@ -68,6 +68,13 @@ export default function EventCard({ event, onPress, index = 0, hasOrigin = true 
   const lb = leaveByResult(event.leave_by, event.availability_tier, now);
   const ctx = contextualLabelResult(event.start_time, event.travel_minutes, now, hasOrigin);
 
+  // Both pill rows pair a flexible label with a sibling that refuses to shrink.
+  // At large Dynamic Type sizes the rigid side wins and crushes the label to an
+  // ellipsis — "Starts in 25 min" rendered as "St…", which is the most
+  // time-sensitive line on the card. Stack them instead of squeezing.
+  const { fontScale } = useWindowDimensions();
+  const stacked = fontScale >= 1.35;
+
   return (
     <Animated.View style={{ opacity, transform: [{ translateY }] }}>
       <TouchableOpacity
@@ -106,7 +113,7 @@ export default function EventCard({ event, onPress, index = 0, hasOrigin = true 
         {/* Bottom 2-row pill */}
         <View style={styles.pill}>
           {/* Row 1 */}
-          <View style={styles.pillRow1}>
+          <View style={[styles.pillRow1, stacked && styles.pillRowStacked]}>
             <View style={styles.priceTime}>
               <Text style={[styles.priceText, event.is_free && styles.priceFree]}>
                 {price}
@@ -125,10 +132,10 @@ export default function EventCard({ event, onPress, index = 0, hasOrigin = true 
           <View style={styles.divider} />
 
           {/* Row 2 */}
-          <View style={styles.pillRow2}>
+          <View style={[styles.pillRow2, stacked && styles.pillRowStacked]}>
             <Text
-              style={[styles.contextual, { color: ctx.color }]}
-              numberOfLines={1}
+              style={[styles.contextual, stacked && styles.contextualStacked, { color: ctx.color }]}
+              numberOfLines={stacked ? 2 : 1}
               ellipsizeMode="tail"
             >
               {ctx.text}
@@ -254,6 +261,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  pillRowStacked: {
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: 4,
+  },
+  contextualStacked: { flex: 0, marginRight: 0, width: "100%" },
   contextual: {
     flex: 1,
     fontSize: 11,
