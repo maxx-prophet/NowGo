@@ -2,25 +2,13 @@ import fetch from "node-fetch";
 import fs from "fs";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
+import { tonightWindow } from "../services/tonight-window.js";
 dotenv.config({ path: ".env.nowgo" });
 
 const TM_API_KEY = process.env.TM_API_KEY;
 const NYC_LAT = 40.758;
 const NYC_LNG = -73.9855;
 const RADIUS_MILES = 10;
-
-function getTonightWindow() {
-  const now = new Date();
-  const start = new Date(now);
-  start.setHours(17, 0, 0, 0);
-  const end = new Date(now);
-  end.setDate(end.getDate() + 1);
-  end.setHours(2, 0, 0, 0);
-  return {
-    start: start.toISOString().split(".")[0] + "Z",
-    end: end.toISOString().split(".")[0] + "Z",
-  };
-}
 
 // ─── NORMALIZE ───────────────────────────────────────────────────────────────
 
@@ -79,29 +67,63 @@ function mapAvailability(statusCode) {
 
 // ─── FETCH ───────────────────────────────────────────────────────────────────
 
-export async function fetchTicketmaster() {
-  const { start, end } = getTonightWindow();
+// Ticketmaster caps a page at 200 and deep paging at 1000 results.
+const TM_PAGE_SIZE = 200;
+const TM_MAX_EVENTS = 1000;
 
-  const url = new URL("https://app.ticketmaster.com/discovery/v2/events.json");
-  url.searchParams.set("apikey", TM_API_KEY);
-  url.searchParams.set("latlong", `${NYC_LAT},${NYC_LNG}`);
-  url.searchParams.set("radius", RADIUS_MILES);
-  url.searchParams.set("unit", "miles");
-  url.searchParams.set("startDateTime", start);
-  url.searchParams.set("endDateTime", end);
-  url.searchParams.set("size", "50");
-  url.searchParams.set("sort", "date,asc");
-  url.searchParams.set("includeSpellcheck", "yes");
+// `fetchImpl` is injectable so the paging loop can be tested without network.
+export async function fetchTicketmaster({ fetchImpl = fetch } = {}) {
+  const { utcStart: start, utcEnd: end } = tonightWindow();
 
   console.log("\n📡 Fetching Ticketmaster...");
   console.log(`   Window: ${start} → ${end}`);
 
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`TM API error: ${res.status} ${res.statusText}`);
+  // A single page of 50 sorted by date ascending was dropping three quarters of
+  // the catalog — 207 events available, 50 ingested — and because the sort is by
+  // start time it cut the *late* shows first, which is exactly what "tonight"
+  // means to someone opening the app at 9pm. Low-volume segments like Comedy and
+  // Sports were the ones that vanished entirely.
+  const raw = [];
+  let page = 0;
+  let totalPages = 1;
 
-  const data = await res.json();
-  const raw = data._embedded?.events ?? [];
-  console.log(`   ✅ Got ${raw.length} raw events`);
+  while (page < totalPages && raw.length < TM_MAX_EVENTS) {
+    const url = new URL("https://app.ticketmaster.com/discovery/v2/events.json");
+    url.searchParams.set("apikey", TM_API_KEY);
+    url.searchParams.set("latlong", `${NYC_LAT},${NYC_LNG}`);
+    url.searchParams.set("radius", RADIUS_MILES);
+    url.searchParams.set("unit", "miles");
+    url.searchParams.set("startDateTime", start);
+    url.searchParams.set("endDateTime", end);
+    url.searchParams.set("size", String(TM_PAGE_SIZE));
+    url.searchParams.set("page", String(page));
+    url.searchParams.set("sort", "date,asc");
+    url.searchParams.set("includeSpellcheck", "yes");
+
+    const res = await fetchImpl(url.toString());
+    if (!res.ok) {
+      // Keep whatever earlier pages returned rather than losing the whole run.
+      if (page > 0) {
+        console.warn(`   ⚠️  Page ${page} failed (${res.status}) — keeping ${raw.length} events so far`);
+        break;
+      }
+      throw new Error(`TM API error: ${res.status} ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    const events = data._embedded?.events ?? [];
+    raw.push(...events);
+
+    totalPages = Math.min(
+      data.page?.totalPages ?? 1,
+      Math.ceil(TM_MAX_EVENTS / TM_PAGE_SIZE)
+    );
+    page += 1;
+
+    if (events.length === 0) break;
+  }
+
+  console.log(`   ✅ Got ${raw.length} raw events across ${page} page(s)`);
 
   const filtered = raw.filter((e) => {
     if (e.dates?.status?.code === "cancelled") return false;

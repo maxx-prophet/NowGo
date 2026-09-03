@@ -1,6 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mergeEvents, resolveAvailability } from "./seatgeek.js";
+import {
+  mergeEvents,
+  resolveAvailability,
+  segmentFromTaxonomies,
+  normalizeSeatGeekEvent,
+} from "./seatgeek.js";
 
 const makeTmEvent = (overrides = {}) => ({
   id: "tm_1", source: "ticketmaster", name: "Concert",
@@ -135,4 +140,110 @@ test("mergeEvents still fills price while preserving the safer tier", async () =
   const result = await mergeEvents([tm], [sg], new Map(), null);
   assert.equal(result[0].priceMin, 50, "price should still be filled from SeatGeek");
   assert.equal(result[0].availabilityTier, "sold_out");
+});
+
+// ─── SEGMENT DERIVATION ───────────────────────────────────────────────────────
+//
+// SeatGeek's `type` is league-level ("mlb", "wnba", "tennis"), never
+// category-level, so a hand-kept type→segment map always trails their catalog
+// and the unmapped remainder used to be stored verbatim as the segment.
+
+const tax = (...nodes) => nodes;
+const ROOT_SPORTS = { id: 1000000, name: "sports", parent_id: null };
+const ROOT_CONCERTS = { id: 2000000, name: "concerts", parent_id: null };
+const ROOT_THEATER = { id: 3000000, name: "theater", parent_id: null };
+const ROOT_ADDON = { id: 4000000, name: "addon", parent_id: null };
+
+test("every sports league resolves to the Sports segment", () => {
+  const leagues = [
+    { id: 1010000, name: "baseball" },
+    { id: 1020000, name: "football" },
+    { id: 1030000, name: "basketball" },
+    { id: 1090000, name: "tennis" },
+    { id: 1040000, name: "hockey" },
+    { id: 1100000, name: "soccer" },
+    { id: 1060000, name: "fighting" },
+  ];
+  for (const league of leagues) {
+    assert.equal(
+      segmentFromTaxonomies(tax(ROOT_SPORTS, { ...league, parent_id: 1000000 })),
+      "Sports",
+      `${league.name} should be Sports`
+    );
+  }
+});
+
+test("a league SeatGeek adds tomorrow still lands in Sports", () => {
+  // The point of reading the root: an id this code has never seen still works.
+  assert.equal(
+    segmentFromTaxonomies(tax(ROOT_SPORTS, { id: 1999999, name: "pickleball", parent_id: 1000000 })),
+    "Sports"
+  );
+});
+
+test("comedy is lifted out of Theater into its own segment", () => {
+  assert.equal(
+    segmentFromTaxonomies(tax(ROOT_THEATER, { id: 3040000, name: "comedy", parent_id: 3000000 })),
+    "Comedy"
+  );
+});
+
+test("a sub-genre of comedy is still Comedy", () => {
+  assert.equal(
+    segmentFromTaxonomies(
+      tax(ROOT_THEATER, { id: 3040000, name: "comedy", parent_id: 3000000 },
+          { id: 3040100, name: "stand-up", parent_id: 3040000 })
+    ),
+    "Comedy"
+  );
+});
+
+test("family entertainment is lifted out of Theater into Family", () => {
+  assert.equal(
+    segmentFromTaxonomies(tax(ROOT_THEATER, { id: 3050000, name: "family entertainment", parent_id: 3000000 })),
+    "Family"
+  );
+});
+
+test("dance, opera and classical stay under Arts & Theatre", () => {
+  for (const node of [
+    { id: 3060000, name: "dance" },
+    { id: 3010000, name: "classical music" },
+    { id: 3030000, name: "broadway shows" },
+  ]) {
+    assert.equal(
+      segmentFromTaxonomies(tax(ROOT_THEATER, { ...node, parent_id: 3000000 })),
+      "Arts & Theatre",
+      `${node.name} should be Arts & Theatre`
+    );
+  }
+});
+
+test("concerts resolve to Music", () => {
+  assert.equal(
+    segmentFromTaxonomies(tax(ROOT_CONCERTS, { id: 2010000, name: "concert", parent_id: 2000000 })),
+    "Music"
+  );
+});
+
+test("addon rows are not events and get no segment", () => {
+  assert.equal(segmentFromTaxonomies(tax(ROOT_ADDON)), null);
+});
+
+test("a missing taxonomy yields null rather than a raw passthrough", () => {
+  // null hands the row to the LLM enrichment pass, which only picks up
+  // NULL/'Undefined'/'Other'. A raw "tennis" would sit there forever.
+  assert.equal(segmentFromTaxonomies(undefined), null);
+  assert.equal(segmentFromTaxonomies([]), null);
+  assert.equal(segmentFromTaxonomies([{ id: 1010000, name: "baseball", parent_id: 1000000 }]), null);
+});
+
+test("normalize never emits a lowercase league as a segment", () => {
+  const event = {
+    id: 42, title: "Atlanta Braves at New York Mets", type: "mlb",
+    datetime_local: "2026-09-01T19:10:00",
+    taxonomies: tax(ROOT_SPORTS, { id: 1010000, name: "baseball", parent_id: 1000000 }),
+    venue: { name: "Citi Field" }, stats: {},
+  };
+  assert.equal(normalizeSeatGeekEvent(event).segment, "Sports");
 });

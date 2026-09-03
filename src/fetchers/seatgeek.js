@@ -3,51 +3,64 @@ import fs from "fs";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { findVenueByEmbedding } from "../services/venue-embeddings.js";
+import { tonightWindow } from "../services/tonight-window.js";
 dotenv.config({ path: ".env.nowgo" });
 
 const NYC_LAT = 40.758;
 const NYC_LNG = -73.9855;
 const RADIUS_MILES = 10;
 
-function getTonightWindow() {
-  const now = new Date();
-  const start = new Date(now);
-  start.setHours(17, 0, 0, 0);
-  const end = new Date(now);
-  end.setDate(end.getDate() + 1);
-  end.setHours(2, 0, 0, 0);
-  return {
-    start: start.toISOString().split(".")[0],
-    end: end.toISOString().split(".")[0],
-  };
-}
+const SG_PAGE_SIZE = 100;
+const SG_MAX_EVENTS = 1000;
 
 // ─── NORMALIZE ───────────────────────────────────────────────────────────────
 
-function normalizeSeatGeekEvent(e) {
+// SeatGeek's `type` is league-level ("mlb", "wnba", "tennis", "broadway"), not
+// category-level, and they add new ones without notice. A hand-kept type→segment
+// map therefore always trails their catalog, and the old fallback stored every
+// unmapped type verbatim — leaving 89 sports events under segments like "tennis"
+// and "mlb" that the Sports filter (segment = 'Sports') could never match.
+//
+// Every event instead carries a `taxonomies` chain whose root (parent_id null)
+// is one of exactly four stable ids, so derive the segment from that. A league
+// SeatGeek invents tomorrow still hangs off root 1000000 and lands in Sports.
+const SG_ROOT_SEGMENTS = {
+  1000000: "Sports",
+  2000000: "Music",
+  3000000: "Arts & Theatre",
+  // 4000000 "addon" is parking passes and merch, not an event.
+};
+
+// Two children of Theater are top-level segments in NowGo's own vocabulary.
+// Keyed by the id's second level, so sub-genres (3040100) resolve too.
+const SG_THEATER_OVERRIDES = {
+  304: "Comedy",
+  305: "Family", // Family Entertainment
+};
+
+export function segmentFromTaxonomies(taxonomies) {
+  if (!Array.isArray(taxonomies)) return null;
+
+  const root = taxonomies.find((t) => t?.parent_id == null);
+  const base = root ? SG_ROOT_SEGMENTS[root.id] : null;
+  if (!base) return null;
+  if (root.id !== 3000000) return base;
+
+  for (const t of taxonomies) {
+    const override = SG_THEATER_OVERRIDES[Math.floor((t?.id ?? 0) / 10000)];
+    if (override) return override;
+  }
+  return base;
+}
+
+export function normalizeSeatGeekEvent(e) {
   const venue = e.venue;
   const performer = e.performers?.[0];
 
-  const segmentMap = {
-    concert: "Music",
-    music_festival: "Music",
-    sports: "Sports",
-    wrestling: "Sports",
-    football: "Sports",
-    baseball: "Sports",
-    basketball: "Sports",
-    hockey: "Sports",
-    theater: "Arts & Theatre",
-    broadway: "Arts & Theatre",
-    comedy: "Comedy",
-    classical: "Arts & Theatre",
-    dance_performance_tour: "Arts & Theatre",
-    entertainment: "Arts & Theatre",
-    film: "Arts & Theatre",
-    family: "Family",
-  };
-  const rawType = e.type ?? "";
-  const segment = segmentMap[rawType] ?? (rawType && rawType !== "Undefined" ? rawType : null);
+  // Falls back to null, never to the raw type: null is what the LLM enrichment
+  // pass in services/genre-enrichment.js picks up, so an unclassified event
+  // self-heals instead of sitting forever under a segment nothing filters on.
+  const segment = segmentFromTaxonomies(e.taxonomies);
 
   return {
     id: `sg_${e.id}`,
@@ -205,28 +218,51 @@ export async function fetchSeatGeek(tmEvents = [], aliasMap = new Map(), dbPool 
     throw new Error("Missing SEATGEEK_CLIENT_ID or SEATGEEK_CLIENT_SECRET in .env.nowgo");
   }
 
-  const { start, end } = getTonightWindow();
-
-  const url = new URL("https://api.seatgeek.com/2/events");
-  url.searchParams.set("client_id", clientId);
-  url.searchParams.set("client_secret", clientSecret);
-  url.searchParams.set("lat", NYC_LAT);
-  url.searchParams.set("lon", NYC_LNG);
-  url.searchParams.set("range", `${RADIUS_MILES}mi`);
-  url.searchParams.set("datetime_local.gte", start);
-  url.searchParams.set("datetime_local.lte", end);
-  url.searchParams.set("per_page", "50");
-  url.searchParams.set("sort", "datetime_local.asc");
+  // SeatGeek's datetime_local filters are naive NYC wall-clock, not UTC.
+  const { localStart: start, localEnd: end } = tonightWindow();
 
   console.log("\n📡 Fetching SeatGeek...");
   console.log(`   Window: ${start} → ${end}`);
 
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`SeatGeek API error: ${res.status} ${res.statusText}`);
+  // Same truncation as Ticketmaster: one page of 50, sorted ascending, so the
+  // late-evening events fall off the end on any busy night.
+  const raw = [];
+  let page = 1;
+  let total = Infinity;
 
-  const data = await res.json();
-  const raw = data.events ?? [];
-  console.log(`   ✅ Got ${raw.length} raw events`);
+  while (raw.length < total && raw.length < SG_MAX_EVENTS) {
+    const url = new URL("https://api.seatgeek.com/2/events");
+    url.searchParams.set("client_id", clientId);
+    url.searchParams.set("client_secret", clientSecret);
+    url.searchParams.set("lat", NYC_LAT);
+    url.searchParams.set("lon", NYC_LNG);
+    url.searchParams.set("range", `${RADIUS_MILES}mi`);
+    url.searchParams.set("datetime_local.gte", start);
+    url.searchParams.set("datetime_local.lte", end);
+    url.searchParams.set("per_page", String(SG_PAGE_SIZE));
+    url.searchParams.set("page", String(page));
+    url.searchParams.set("sort", "datetime_local.asc");
+
+    const res = await fetch(url.toString());
+    if (!res.ok) {
+      if (page > 1) {
+        console.warn(`   ⚠️  Page ${page} failed (${res.status}) — keeping ${raw.length} events so far`);
+        break;
+      }
+      throw new Error(`SeatGeek API error: ${res.status} ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    const events = data.events ?? [];
+    raw.push(...events);
+
+    total = data.meta?.total ?? raw.length;
+    page += 1;
+
+    if (events.length === 0) break;
+  }
+
+  console.log(`   ✅ Got ${raw.length} raw events across ${page - 1} page(s)`);
 
   const filtered = raw.filter((e) => e.status !== "canceled");
   console.log(`   🧹 ${filtered.length} after filtering cancelled`);
