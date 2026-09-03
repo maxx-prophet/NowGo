@@ -25,7 +25,9 @@ export default function IdentityScreen({ navigation }: { navigation: OnboardingN
 
   // At large Dynamic Type sizes the emoji and radio leave the title almost no
   // width, so "Born & bred local" wrapped onto three lines. Stack the card
-  // instead of squeezing it.
+  // instead of squeezing it, and give the generous fixed chrome — an 80pt top
+  // pad, a 40pt gap above the choices, 24pt card padding — back to the text,
+  // so the first option is readable without scrolling for it.
   const { fontScale } = useWindowDimensions();
   const stacked = fontScale >= 1.35;
 
@@ -37,17 +39,24 @@ export default function IdentityScreen({ navigation }: { navigation: OnboardingN
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.scroll, stacked && styles.scrollCompact]}
+      >
         <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.stepLabel}>STEP 2 OF 5</Text>
         {/* No hardcoded break: at large sizes it forced a third line. */}
-        <Text style={styles.headline} maxFontSizeMultiplier={1.6}>
+        <Text style={styles.headline} maxFontSizeMultiplier={stacked ? 1.35 : 1.6}>
           Are you a New Yorker?
         </Text>
         <View style={{ height: 8 }} />
-        <Text style={styles.sub}>Helps us surface the right mix of events for you.</Text>
+        {/* Supporting copy yields to the choices at accessibility sizes: still 1.8x,
+            but three lines of it was pushing the options off the screen. */}
+        <Text style={styles.sub} maxFontSizeMultiplier={stacked ? 1.8 : undefined}>
+          Helps us surface the right mix of events for you.
+        </Text>
 
-        <View style={styles.choices}>
+        <View style={[styles.choices, stacked && styles.choicesCompact]}>
           {CHOICES.map((c) => {
             const isSelected = selected === c.value;
             const radio = (
@@ -61,6 +70,7 @@ export default function IdentityScreen({ navigation }: { navigation: OnboardingN
                 style={[
                   styles.choice,
                   stacked && styles.choiceStacked,
+                  stacked && styles.choiceCompact,
                   isSelected && styles.choiceSelected,
                 ]}
                 onPress={() => setSelected(c.value)}
@@ -71,7 +81,7 @@ export default function IdentityScreen({ navigation }: { navigation: OnboardingN
                 {stacked ? (
                   <>
                     <View style={styles.stackedHeader}>
-                      <Text style={styles.choiceEmoji}>{c.emoji}</Text>
+                      <Text style={styles.choiceEmoji} maxFontSizeMultiplier={1.3}>{c.emoji}</Text>
                       {radio}
                     </View>
                     <View style={styles.choiceText}>
@@ -81,7 +91,7 @@ export default function IdentityScreen({ navigation }: { navigation: OnboardingN
                   </>
                 ) : (
                   <>
-                    <Text style={styles.choiceEmoji}>{c.emoji}</Text>
+                    <Text style={styles.choiceEmoji} maxFontSizeMultiplier={1.3}>{c.emoji}</Text>
                     <View style={styles.choiceText}>
                       <Text style={styles.choiceTitle}>{c.title}</Text>
                       <Text style={styles.choiceDesc}>{c.desc}</Text>
@@ -122,6 +132,7 @@ const styles = StyleSheet.create({
     paddingTop: 80,
     paddingBottom: 16,
   },
+  scrollCompact: { paddingTop: 56 },
   footer: {
     paddingHorizontal: 32,
     paddingBottom: 56,
@@ -144,6 +155,7 @@ const styles = StyleSheet.create({
   },
   sub: { fontSize: 15, color: "#6B7280", lineHeight: 22 },
   choices: { marginTop: 40, gap: 12 },
+  choicesCompact: { marginTop: 16, gap: 8 },
   choice: {
     backgroundColor: "#1A1A1A",
     borderWidth: 1.5,
@@ -154,7 +166,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 16,
   },
-  choiceStacked: { flexDirection: "column", alignItems: "stretch", gap: 12 },
+  choiceStacked: { flexDirection: "column", alignItems: "stretch", gap: 8 },
+  choiceCompact: { padding: 16, borderRadius: 16 },
   stackedHeader: {
     flexDirection: "row",
     alignItems: "center",

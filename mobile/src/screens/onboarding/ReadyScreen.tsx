@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet , useWindowDimensions } from "react-native";
 import { usePreferencesContext } from "../../contexts/PreferencesContext";
 import { usePostHog } from "posthog-react-native";
 import BackButton from "../../components/BackButton";
@@ -18,6 +18,10 @@ function budgetLabel(max: number | null): string {
 }
 
 export default function ReadyScreen({ navigation }: { navigation: OnboardingNavProp<"Ready"> }) {
+  // Hand the generous fixed chrome back to the text at large Dynamic Type
+  // sizes, so the screen mostly fits instead of only being scrollable.
+  const { fontScale } = useWindowDimensions();
+  const compact = fontScale >= 1.35;
   const { preferences, completeOnboarding, savePreferences } = usePreferencesContext();
   const posthog = usePostHog();
 
@@ -50,7 +54,7 @@ export default function ReadyScreen({ navigation }: { navigation: OnboardingNavP
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scroll, compact && styles.scrollCompact]}>
         <BackButton onPress={onBack} />
         <View style={styles.card}>
           <View style={styles.row}>
@@ -73,11 +77,11 @@ export default function ReadyScreen({ navigation }: { navigation: OnboardingNavP
           </View>
         </View>
 
-        <Text style={styles.headline} maxFontSizeMultiplier={1.6}>
+        <Text style={styles.headline} maxFontSizeMultiplier={compact ? 1.35 : 1.6}>
           You're all{"\n"}set. <Text style={styles.gold}>Go.</Text>
         </Text>
         <View style={{ height: 16 }} />
-        <Text style={styles.sub}>
+        <Text style={styles.sub} maxFontSizeMultiplier={compact ? 1.8 : undefined}>
           Tonight's events, ranked for you.{"\n"}Change this anytime in settings.
         </Text>
       </ScrollView>
@@ -112,6 +116,7 @@ const styles = StyleSheet.create({
     paddingTop: 80,
     paddingBottom: 16,
   },
+  scrollCompact: { paddingTop: 56 },
   footer: {
     paddingHorizontal: 32,
     paddingBottom: 56,
