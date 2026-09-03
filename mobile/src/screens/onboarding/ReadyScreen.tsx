@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import { usePreferencesContext } from "../../contexts/PreferencesContext";
 import { usePostHog } from "posthog-react-native";
 import BackButton from "../../components/BackButton";
@@ -50,7 +50,7 @@ export default function ReadyScreen({ navigation }: { navigation: OnboardingNavP
 
   return (
     <View style={styles.container}>
-      <View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         <BackButton onPress={onBack} />
         <View style={styles.card}>
           <View style={styles.row}>
@@ -73,16 +73,16 @@ export default function ReadyScreen({ navigation }: { navigation: OnboardingNavP
           </View>
         </View>
 
-        <Text style={styles.headline}>
+        <Text style={styles.headline} maxFontSizeMultiplier={1.6}>
           You're all{"\n"}set. <Text style={styles.gold}>Go.</Text>
         </Text>
         <View style={{ height: 16 }} />
         <Text style={styles.sub}>
           Tonight's events, ranked for you.{"\n"}Change this anytime in settings.
         </Text>
-      </View>
+      </ScrollView>
 
-      <View>
+      <View style={styles.footer}>
         <TouchableOpacity style={styles.btn} onPress={onFinish}>
           <Text style={styles.btnText}>Show me tonight →</Text>
         </TouchableOpacity>
@@ -102,13 +102,21 @@ export default function ReadyScreen({ navigation }: { navigation: OnboardingNavP
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0A0A0A",
+  container: { flex: 1, backgroundColor: "#0A0A0A" },
+  // Without a scroll view this was a fixed flex:1 column: at large Dynamic
+  // Type sizes the content and the button below it were clipped off-screen
+  // with no way to reach them.
+  scroll: {
+    flexGrow: 1,
     paddingHorizontal: 32,
     paddingTop: 80,
+    paddingBottom: 16,
+  },
+  footer: {
+    paddingHorizontal: 32,
     paddingBottom: 56,
-    justifyContent: "space-between",
+    paddingTop: 12,
+    backgroundColor: "#0A0A0A",
   },
   card: {
     backgroundColor: "#1A1A1A",

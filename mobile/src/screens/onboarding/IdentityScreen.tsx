@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+} from "react-native";
 import { usePreferencesContext } from "../../contexts/PreferencesContext";
 import { usePostHog } from "posthog-react-native";
 import BackButton from "../../components/BackButton";
@@ -16,6 +23,12 @@ export default function IdentityScreen({ navigation }: { navigation: OnboardingN
   const posthog = usePostHog();
   const [selected, setSelected] = useState<UserIdentity>(preferences.identity);
 
+  // At large Dynamic Type sizes the emoji and radio leave the title almost no
+  // width, so "Born & bred local" wrapped onto three lines. Stack the card
+  // instead of squeezing it.
+  const { fontScale } = useWindowDimensions();
+  const stacked = fontScale >= 1.35;
+
   async function onContinue() {
     await savePreferences({ identity: selected });
     posthog?.capture("onboarding_identity_selected", { identity: selected });
@@ -24,34 +37,65 @@ export default function IdentityScreen({ navigation }: { navigation: OnboardingN
 
   return (
     <View style={styles.container}>
-      <View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.stepLabel}>STEP 2 OF 5</Text>
-        <Text style={styles.headline}>Are you a New{"\n"}Yorker?</Text>
+        {/* No hardcoded break: at large sizes it forced a third line. */}
+        <Text style={styles.headline} maxFontSizeMultiplier={1.6}>
+          Are you a New Yorker?
+        </Text>
         <View style={{ height: 8 }} />
         <Text style={styles.sub}>Helps us surface the right mix of events for you.</Text>
 
         <View style={styles.choices}>
-          {CHOICES.map((c) => (
-            <TouchableOpacity
-              key={c.value}
-              style={[styles.choice, selected === c.value && styles.choiceSelected]}
-              onPress={() => setSelected(c.value)}
-            >
-              <Text style={styles.choiceEmoji}>{c.emoji}</Text>
-              <View style={styles.choiceText}>
-                <Text style={styles.choiceTitle}>{c.title}</Text>
-                <Text style={styles.choiceDesc}>{c.desc}</Text>
+          {CHOICES.map((c) => {
+            const isSelected = selected === c.value;
+            const radio = (
+              <View style={[styles.check, isSelected && styles.checkSelected]}>
+                {isSelected && <View style={styles.checkInner} />}
               </View>
-              <View style={[styles.check, selected === c.value && styles.checkSelected]}>
-                {selected === c.value && <View style={styles.checkInner} />}
-              </View>
-            </TouchableOpacity>
-          ))}
+            );
+            return (
+              <TouchableOpacity
+                key={c.value}
+                style={[
+                  styles.choice,
+                  stacked && styles.choiceStacked,
+                  isSelected && styles.choiceSelected,
+                ]}
+                onPress={() => setSelected(c.value)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: isSelected }}
+                accessibilityLabel={`${c.title}. ${c.desc}`}
+              >
+                {stacked ? (
+                  <>
+                    <View style={styles.stackedHeader}>
+                      <Text style={styles.choiceEmoji}>{c.emoji}</Text>
+                      {radio}
+                    </View>
+                    <View style={styles.choiceText}>
+                      <Text style={styles.choiceTitle}>{c.title}</Text>
+                      <Text style={styles.choiceDesc}>{c.desc}</Text>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.choiceEmoji}>{c.emoji}</Text>
+                    <View style={styles.choiceText}>
+                      <Text style={styles.choiceTitle}>{c.title}</Text>
+                      <Text style={styles.choiceDesc}>{c.desc}</Text>
+                    </View>
+                    {radio}
+                  </>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
-      </View>
+      </ScrollView>
 
-      <View>
+      <View style={styles.footer}>
         <TouchableOpacity style={styles.btn} onPress={onContinue}>
           <Text style={styles.btnText}>Continue →</Text>
         </TouchableOpacity>
@@ -68,13 +112,21 @@ export default function IdentityScreen({ navigation }: { navigation: OnboardingN
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0A0A0A",
+  container: { flex: 1, backgroundColor: "#0A0A0A" },
+  // The screen used to be a fixed flex:1 column with space-between. Once text
+  // scaled past the viewport the choices and the Continue button were simply
+  // clipped, with no way to reach them — onboarding became uncompletable.
+  scroll: {
+    flexGrow: 1,
     paddingHorizontal: 32,
     paddingTop: 80,
+    paddingBottom: 16,
+  },
+  footer: {
+    paddingHorizontal: 32,
     paddingBottom: 56,
-    justifyContent: "space-between",
+    paddingTop: 12,
+    backgroundColor: "#0A0A0A",
   },
   stepLabel: {
     fontSize: 12,
@@ -102,6 +154,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 16,
   },
+  choiceStacked: { flexDirection: "column", alignItems: "stretch", gap: 12 },
+  stackedHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   choiceSelected: { borderColor: "#F5A623", backgroundColor: "#1F1A10" },
   choiceEmoji: { fontSize: 32 },
   choiceText: { flex: 1 },
@@ -110,6 +168,7 @@ const styles = StyleSheet.create({
   check: {
     width: 24,
     height: 24,
+    flexShrink: 0,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: "#2A2A2A",
