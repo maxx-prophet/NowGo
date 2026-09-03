@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import {
   View, Text, FlatList, TouchableOpacity,
   ActivityIndicator, StyleSheet, RefreshControl, Linking,
+  useWindowDimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import EventCard from "../components/EventCard";
@@ -58,6 +59,13 @@ export default function TonightFeed({ navigation }: Props) {
   const { coords, permissionStatus } = useLocation();
 
   const [category, setCategory] = useState(ALL_CATEGORIES);
+
+  // The budget chips sit in a flex:1 lane beside the mode and filter buttons,
+  // which grow with the text and do not shrink. At large Dynamic Type sizes
+  // they squeeze the chip lane down to a sliver, so give the chips their own
+  // row instead.
+  const { fontScale } = useWindowDimensions();
+  const stackedFilters = fontScale >= 1.35;
   const [budgetMax, setBudgetMax] = useState<BudgetMax>(NO_BUDGET);
   const [mode, setMode] = useState<"transit" | "walk" | "drive">("transit");
   const [sortBy, setSortBy] = useState<"best" | "soonest" | "nearest" | "cheapest">("best");
@@ -214,9 +222,9 @@ export default function TonightFeed({ navigation }: Props) {
       </View>
 
       {/* Row 2 — Budget chips + pinned buttons */}
-      <View style={styles.budgetRow}>
+      <View style={[styles.budgetRow, stackedFilters && styles.budgetRowStacked]}>
         {/* Left: scrollable budget chips */}
-        <View style={styles.budgetScrollWrap}>
+        <View style={[styles.budgetScrollWrap, stackedFilters && styles.budgetScrollWrapStacked]}>
           <FlatList
             data={BUDGETS}
             horizontal
@@ -248,7 +256,7 @@ export default function TonightFeed({ navigation }: Props) {
         </View>
 
         {/* Right: pinned mode + filter buttons */}
-        <View style={styles.pinnedButtons}>
+        <View style={[styles.pinnedButtons, stackedFilters && styles.pinnedButtonsStacked]}>
           {/* Mode button + inline picker */}
           <View>
             <TouchableOpacity
@@ -533,7 +541,10 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     zIndex: 10,
   },
+  budgetRowStacked: { flexDirection: "column", alignItems: "stretch", gap: 8 },
   budgetScrollWrap: { flex: 1, position: "relative" },
+  budgetScrollWrapStacked: { flex: 0, width: "100%" },
+  pinnedButtonsStacked: { paddingLeft: 16, justifyContent: "flex-start" },
   budgetChipRow: { paddingHorizontal: 16, paddingTop: 8, gap: 8, alignItems: "center" },
   budgetChip: {
     paddingHorizontal: 12,
