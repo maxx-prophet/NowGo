@@ -1,25 +1,29 @@
 import React from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet , useWindowDimensions } from "react-native";
 import { usePostHog } from "posthog-react-native";
 import type { OnboardingNavProp } from "../../types";
 
 export default function WelcomeScreen({ navigation }: { navigation: OnboardingNavProp<"Welcome"> }) {
+  // Hand the generous fixed chrome back to the text at large Dynamic Type
+  // sizes, so the screen mostly fits instead of only being scrollable.
+  const { fontScale } = useWindowDimensions();
+  const compact = fontScale >= 1.35;
   const posthog = usePostHog();
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scroll, compact && styles.scrollCompact]}>
         <View style={styles.wordmark}>
           <Text style={styles.wordmarkText}>
             <Text style={styles.gold}>Now</Text>
             <Text style={[styles.gold, styles.italic]}>Go</Text>
           </Text>
         </View>
-        <Text style={styles.headline} maxFontSizeMultiplier={1.6}>
+        <Text style={styles.headline} maxFontSizeMultiplier={compact ? 1.35 : 1.6}>
           Tonight{"\n"}starts{"\n"}<Text style={styles.gold}>now.</Text>
         </Text>
         <View style={{ height: 24 }} />
-        <Text style={styles.sub}>
+        <Text style={styles.sub} maxFontSizeMultiplier={compact ? 1.8 : undefined}>
           NYC events, ranked for you.{"\n"}Leave on time. Never miss out.
         </Text>
       </ScrollView>
@@ -54,6 +58,7 @@ const styles = StyleSheet.create({
     paddingTop: 80,
     paddingBottom: 16,
   },
+  scrollCompact: { paddingTop: 56 },
   footer: {
     paddingHorizontal: 32,
     paddingBottom: 56,

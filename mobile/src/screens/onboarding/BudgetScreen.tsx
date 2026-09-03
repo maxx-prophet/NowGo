@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, PanResponder, GestureResponderEvent } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, PanResponder, GestureResponderEvent, PanResponderGestureState, useWindowDimensions } from "react-native";
 import { usePreferencesContext } from "../../contexts/PreferencesContext";
 import { usePostHog } from "posthog-react-native";
 import BackButton from "../../components/BackButton";
@@ -14,31 +14,60 @@ const SNAPS: { label: string; value: number | null; sub: string }[] = [
 ];
 
 export default function BudgetScreen({ navigation }: { navigation: OnboardingNavProp<"Budget"> }) {
+  // Hand the generous fixed chrome back to the text at large Dynamic Type
+  // sizes, so the screen mostly fits instead of only being scrollable.
+  const { fontScale } = useWindowDimensions();
+  const compact = fontScale >= 1.35;
   const { preferences, savePreferences } = usePreferencesContext();
   const posthog = usePostHog();
   const [budget, setBudget] = useState<number | null>(preferences.budgetMax);
+  // The track lives inside a ScrollView now. Without these the scroll view
+  // fights the drag for the responder and the slider feels laggy.
+  const [dragging, setDragging] = useState(false);
   const trackWidthRef = useRef(0);
+  const trackXRef = useRef(0);
+  const touchAreaRef = useRef<View>(null);
 
   const snapIndex = SNAPS.findIndex((s) => s.value === budget);
   const activeSnap = SNAPS[snapIndex] ?? SNAPS[1];
   const fillPercent = snapIndex <= 0 ? 0 : (snapIndex / (SNAPS.length - 1)) * 100;
 
-  function setBudgetFromTouch(x: number) {
+  // locationX is relative to whichever view the touch is currently over, so as
+  // the finger crossed the fill and the thumb — both children of the track — it
+  // switched frames of reference and the value jumped. Measure the track once
+  // and work in absolute screen coordinates instead.
+  function measureTrack() {
+    touchAreaRef.current?.measureInWindow((x, _y, width) => {
+      trackXRef.current = x;
+      trackWidthRef.current = width;
+    });
+  }
+
+  function setBudgetFromPageX(pageX: number) {
     const width = trackWidthRef.current;
     if (width <= 0) return;
-    const ratio = Math.max(0, Math.min(1, x / width));
+    const ratio = Math.max(0, Math.min(1, (pageX - trackXRef.current) / width));
     const index = Math.round(ratio * (SNAPS.length - 1));
-    setBudget(SNAPS[index].value);
+    // Five discrete stops: re-rendering on every frame that lands on the stop we
+    // are already on is what made the drag feel heavy.
+    setBudget((prev) => (prev === SNAPS[index].value ? prev : SNAPS[index].value));
   }
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (evt: GestureResponderEvent) =>
-        setBudgetFromTouch(evt.nativeEvent.locationX),
-      onPanResponderMove: (evt: GestureResponderEvent) =>
-        setBudgetFromTouch(evt.nativeEvent.locationX),
+      // Once the drag starts the scroll view must not be able to take it back.
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
+      onPanResponderGrant: (evt: GestureResponderEvent) => {
+        setDragging(true);
+        setBudgetFromPageX(evt.nativeEvent.pageX);
+      },
+      onPanResponderMove: (_evt: GestureResponderEvent, gs: PanResponderGestureState) =>
+        setBudgetFromPageX(gs.moveX),
+      onPanResponderRelease: () => setDragging(false),
+      onPanResponderTerminate: () => setDragging(false),
     })
   ).current;
 
@@ -50,11 +79,15 @@ export default function BudgetScreen({ navigation }: { navigation: OnboardingNav
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.scroll, compact && styles.scrollCompact]}
+        scrollEnabled={!dragging}
+      >
         <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.stepLabel}>STEP 4 OF 5</Text>
-        <Text style={styles.headline} maxFontSizeMultiplier={1.6}>What's your{"\n"}budget tonight?</Text>
-        <Text style={styles.sub}>Drag the slider or tap to set your max spend.</Text>
+        <Text style={styles.headline} maxFontSizeMultiplier={compact ? 1.35 : 1.6}>What's your{"\n"}budget tonight?</Text>
+        <Text style={styles.sub} maxFontSizeMultiplier={compact ? 1.8 : undefined}>Drag the slider or tap to set your max spend.</Text>
 
         <View style={styles.priceDisplay}>
           <Text style={styles.priceLabel}>UP TO</Text>
@@ -66,11 +99,13 @@ export default function BudgetScreen({ navigation }: { navigation: OnboardingNav
 
         <View style={styles.sliderContainer}>
           <View
+            ref={touchAreaRef}
             style={styles.touchArea}
-            onLayout={(e) => { trackWidthRef.current = e.nativeEvent.layout.width; }}
+            onLayout={measureTrack}
             {...panResponder.panHandlers}
           >
-            <View style={styles.track}>
+            {/* Decorative: never let these become the touch target. */}
+            <View style={styles.track} pointerEvents="none">
               <View style={[styles.fill, { width: `${fillPercent}%` as any }]} />
               <View style={[styles.thumb, { left: `${fillPercent}%` as any }]} />
             </View>
@@ -124,6 +159,7 @@ const styles = StyleSheet.create({
     paddingTop: 80,
     paddingBottom: 16,
   },
+  scrollCompact: { paddingTop: 56 },
   footer: {
     paddingHorizontal: 32,
     paddingBottom: 56,
