@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, PanResponder, GestureResponderEvent } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, PanResponder, GestureResponderEvent } from "react-native";
 import { usePreferencesContext } from "../../contexts/PreferencesContext";
 import { usePostHog } from "posthog-react-native";
 import BackButton from "../../components/BackButton";
@@ -50,10 +50,10 @@ export default function BudgetScreen({ navigation }: { navigation: OnboardingNav
 
   return (
     <View style={styles.container}>
-      <View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.stepLabel}>STEP 4 OF 5</Text>
-        <Text style={styles.headline}>What's your{"\n"}budget tonight?</Text>
+        <Text style={styles.headline} maxFontSizeMultiplier={1.6}>What's your{"\n"}budget tonight?</Text>
         <Text style={styles.sub}>Drag the slider or tap to set your max spend.</Text>
 
         <View style={styles.priceDisplay}>
@@ -95,9 +95,9 @@ export default function BudgetScreen({ navigation }: { navigation: OnboardingNav
             </TouchableOpacity>
           ))}
         </View>
-      </View>
+      </ScrollView>
 
-      <View>
+      <View style={styles.footer}>
         <TouchableOpacity style={styles.btn} onPress={onContinue}>
           <Text style={styles.btnText}>Continue →</Text>
         </TouchableOpacity>
@@ -114,13 +114,21 @@ export default function BudgetScreen({ navigation }: { navigation: OnboardingNav
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0A0A0A",
+  container: { flex: 1, backgroundColor: "#0A0A0A" },
+  // Without a scroll view this was a fixed flex:1 column: at large Dynamic
+  // Type sizes the content and the button below it were clipped off-screen
+  // with no way to reach them.
+  scroll: {
+    flexGrow: 1,
     paddingHorizontal: 32,
     paddingTop: 80,
+    paddingBottom: 16,
+  },
+  footer: {
+    paddingHorizontal: 32,
     paddingBottom: 56,
-    justifyContent: "space-between",
+    paddingTop: 12,
+    backgroundColor: "#0A0A0A",
   },
   stepLabel: {
     fontSize: 12,

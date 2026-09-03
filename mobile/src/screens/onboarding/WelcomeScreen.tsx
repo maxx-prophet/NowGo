@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import { usePostHog } from "posthog-react-native";
 import type { OnboardingNavProp } from "../../types";
 
@@ -8,23 +8,23 @@ export default function WelcomeScreen({ navigation }: { navigation: OnboardingNa
 
   return (
     <View style={styles.container}>
-      <View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         <View style={styles.wordmark}>
           <Text style={styles.wordmarkText}>
             <Text style={styles.gold}>Now</Text>
             <Text style={[styles.gold, styles.italic]}>Go</Text>
           </Text>
         </View>
-        <Text style={styles.headline}>
+        <Text style={styles.headline} maxFontSizeMultiplier={1.6}>
           Tonight{"\n"}starts{"\n"}<Text style={styles.gold}>now.</Text>
         </Text>
         <View style={{ height: 24 }} />
         <Text style={styles.sub}>
           NYC events, ranked for you.{"\n"}Leave on time. Never miss out.
         </Text>
-      </View>
+      </ScrollView>
 
-      <View>
+      <View style={styles.footer}>
         <TouchableOpacity
           style={styles.btn}
           onPress={() => { posthog?.capture("onboarding_started"); navigation.navigate("Identity"); }}
@@ -44,13 +44,21 @@ export default function WelcomeScreen({ navigation }: { navigation: OnboardingNa
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0A0A0A",
+  container: { flex: 1, backgroundColor: "#0A0A0A" },
+  // Without a scroll view this was a fixed flex:1 column: at large Dynamic
+  // Type sizes the content and the button below it were clipped off-screen
+  // with no way to reach them.
+  scroll: {
+    flexGrow: 1,
     paddingHorizontal: 32,
     paddingTop: 80,
+    paddingBottom: 16,
+  },
+  footer: {
+    paddingHorizontal: 32,
     paddingBottom: 56,
-    justifyContent: "space-between",
+    paddingTop: 12,
+    backgroundColor: "#0A0A0A",
   },
   wordmark: { marginBottom: 56 },
   wordmarkText: { fontSize: 36, fontWeight: "800", letterSpacing: -1 },
