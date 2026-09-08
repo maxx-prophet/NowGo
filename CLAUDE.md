@@ -126,10 +126,12 @@ These are real as of 2026-08-07. Verify before relying on any of them.
   `src/services/walk-in.js`). Venues left `unknown` never appear in the
   "walk-ins only" filter — that is expected, not a bug, until they are curated.
 
-  Curation lives in migrations `009` and `012`–`013`, plus the `010` sweep.
-  As of 2026-08-07: 144 `none`, 15 `space_permitting`, 7 `always`, 2 `standby`,
-  ~109 `unknown` — 45 walk-in events on a typical night across 21 venues. The
-  NYC jazz rooms are essentially fully curated.
+  Curation lives in migrations `009`, `012`–`013` and `015`, plus the `010`
+  sweep. As of 2026-08-07: 144 `none`, 15 `space_permitting`, 7 `always`,
+  2 `standby`, ~109 `unknown` — 45 walk-in events on a typical night across 21
+  venues. The NYC jazz rooms are essentially fully curated. (Spot check
+  2026-09-08: `/events/tonight?limit=500` returned 108 events, 32 of them
+  walk-in.)
 
   **The worklist is `GET /venues/uncurated`**, not something you have to dig
   out of the logs. `reportUncuratedVenues()` still logs the same set after each
@@ -147,10 +149,14 @@ These are real as of 2026-08-07. Verify before relying on any of them.
   midweek and $25 Fri/Sat, Club Room $25 and $35. A single number would
   understate a weekend visit, and a price we show is a promise.
 
-  **Birdland is still uncurated after three attempts** and needs a phone call
-  (212-581-3080). Its FAQ documents that a ticket confirms a reservation and
-  that under-21s need table seating to sit at the bar, but never says whether
-  an adult can turn up without one. 12 events across its two rooms.
+  **Birdland was settled by phone on 2026-08-28** (212-581-3080), after three
+  attempts to resolve it from published sources failed — its FAQ says a ticket
+  confirms a reservation but never says whether an adult can turn up without
+  one. The main room is `space_permitting`: walk-ins allowed, reservation
+  recommended. `door_price` stays NULL because the cover varies by set and
+  seating. **Birdland Theater is a separate room at the same address and stays
+  `unknown`** — the call covered the main room only. Migration
+  `015_venue_walk_in_birdland.sql`.
 
 - **`price_min` is null on most events**, so the budget filter has little to work
   with.
@@ -171,8 +177,9 @@ These are real as of 2026-08-07. Verify before relying on any of them.
 - **`runAvailabilityCheck` has never run in production.** It short-circuits when
   `TICKETSDATA_USERNAME`/`_PASSWORD` are absent, logging
   `ℹ️ TICKETSDATA credentials missing — skipping (tiers set at ingest)`. The
-  credentials are in local `.env.nowgo`; whether they are on Railway is
-  unconfirmed — check a deploy log for that line.
+  credentials are in local `.env.nowgo` and are **not** set on Railway —
+  confirmed from the deploy log of the 2026-08-23 manual run, which logged that
+  line.
 
   **Before enabling it:** `mapTier` returns `sold_out` when it finds zero
   offers, so an empty or malformed TicketsData response is indistinguishable
