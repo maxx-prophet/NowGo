@@ -51,7 +51,7 @@ const DIMMED = "#4B5563";
 - [ ] **Step 1: Install AsyncStorage**
 
 ```bash
-cd /Users/donniebolen/Desktop/NowGo/mobile
+cd /Users/donniebolen/dev/NowGo/mobile
 npx expo install @react-native-async-storage/async-storage
 ```
 
@@ -194,7 +194,7 @@ test("budgetMax null represents no limit", () => {
 - [ ] **Step 4: Run tests**
 
 ```bash
-cd /Users/donniebolen/Desktop/NowGo/mobile && npm test
+cd /Users/donniebolen/dev/NowGo/mobile && npm test
 ```
 
 Expected: 4 pass, 0 fail.
@@ -1018,7 +1018,7 @@ git commit -m "feat: wire onboarding navigator into App.tsx (86b9wfdvf)"
 - [ ] **Step 1: Start the app**
 
 ```bash
-cd /Users/donniebolen/Desktop/NowGo/mobile && npx expo start
+cd /Users/donniebolen/dev/NowGo/mobile && npx expo start
 ```
 
 Press `i` to open iOS simulator.

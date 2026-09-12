@@ -28,7 +28,7 @@ However, there are **five issues that range from crash-inducing to architectural
 React Native 0.76+ enables the **New Architecture** (Fabric renderer + JSI) by default. This is a breaking change for any native module that hasn't been updated to support it. When an incompatible native module loads, the app crashes at startup before any JS executes — which matches the symptom.
 
 ```bash
-cd ~/Desktop/NowGo/mobile/ios
+cd ~/dev/NowGo/mobile/ios
 cat Podfile | grep newArchEnabled
 # If true (or absent, defaulting to true), New Architecture is on
 ```
@@ -43,7 +43,7 @@ cat Podfile.lock | grep -E "RNScreens|react-native-safe-area"
 `expo-location` calls `CLLocationManager.requestWhenInUseAuthorization()` at startup (`TonightFeed.js:22`). On iOS 14+, if the `NSLocationWhenInUseUsageDescription` key is absent from `Info.plist`, the app **terminates immediately** — no JS error, no visible crash screen.
 
 ```bash
-grep -r "NSLocationWhenInUseUsage" ~/Desktop/NowGo/mobile/ios/mobile/Info.plist
+grep -r "NSLocationWhenInUseUsage" ~/dev/NowGo/mobile/ios/mobile/Info.plist
 # Should return a non-empty line. If nothing: this is your crash.
 ```
 

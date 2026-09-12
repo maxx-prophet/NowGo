@@ -66,7 +66,7 @@ pgvector is not installed on the Railway Postgres instance. This is a manual one
 - [ ] **Step 1: Install openai**
 
   ```bash
-  cd /Users/donniebolen/Desktop/NowGo && npm install openai
+  cd /Users/donniebolen/dev/NowGo && npm install openai
   ```
 
   Expected: `added 1 package` (or similar), no errors.

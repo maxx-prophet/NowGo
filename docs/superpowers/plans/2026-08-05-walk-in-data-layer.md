@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Backend runs from the repo root. `cd /Users/donniebolen/Desktop/NowGo` before any command.
+- Backend runs from the repo root. `cd /Users/donniebolen/dev/NowGo` before any command.
 - Load secrets with `set -a; . ./.env.nowgo; set +a` — never hardcode or echo them.
 - `db/migrate.js` re-runs **every** migration file on **every** run. Every data-modifying statement in a migration must be idempotent AND must not overwrite values a human later changed.
 - New test files must be added to the `test` script in `package.json` or they silently never run.
@@ -117,7 +117,7 @@ UPDATE venues SET walk_in_policy = 'space_permitting'
 - [ ] **Step 2: Run the migration**
 
 ```bash
-cd /Users/donniebolen/Desktop/NowGo
+cd /Users/donniebolen/dev/NowGo
 set -a; . ./.env.nowgo; set +a
 npm run migrate 2>&1 | tail -5
 ```
@@ -263,7 +263,7 @@ to:
 - [ ] **Step 3: Run the tests to verify they fail**
 
 ```bash
-cd /Users/donniebolen/Desktop/NowGo
+cd /Users/donniebolen/dev/NowGo
 npm test 2>&1 | tail -15
 ```
 
@@ -414,7 +414,7 @@ These are listed after `e.*` so they override the dead `events.walk_in` column i
 - [ ] **Step 5: Verify locally against the real database**
 
 ```bash
-cd /Users/donniebolen/Desktop/NowGo
+cd /Users/donniebolen/dev/NowGo
 set -a; . ./.env.nowgo; set +a
 PORT=3999 node src/server.js > /tmp/walkin.log 2>&1 &
 SRV=$!
@@ -508,7 +508,7 @@ It belongs inside that same `try/catch` so a failure here cannot skip the enrich
 - [ ] **Step 3: Run the pipeline locally and read the output**
 
 ```bash
-cd /Users/donniebolen/Desktop/NowGo
+cd /Users/donniebolen/dev/NowGo
 set -a; . ./.env.nowgo; set +a
 node -e "
 import('./src/scheduler.js').then(async m => { await m.runPipeline(); process.exit(0); })
@@ -549,7 +549,7 @@ is owed. Mirrors how geocodeVenues logs unmatched venues."
 - [ ] **Step 1: Push**
 
 ```bash
-cd /Users/donniebolen/Desktop/NowGo
+cd /Users/donniebolen/dev/NowGo
 git push origin main 2>&1 | tail -2
 ```
 

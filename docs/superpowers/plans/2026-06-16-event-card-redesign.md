@@ -61,7 +61,7 @@ export interface Event {
 - [ ] **Step 2: Verify TypeScript compiles**
 
 ```bash
-cd /Users/donniebolen/Desktop/NowGo/mobile && npx tsc --noEmit
+cd /Users/donniebolen/dev/NowGo/mobile && npx tsc --noEmit
 ```
 
 Expected: no errors related to `hook`.
@@ -211,7 +211,7 @@ test("contextualLabelResult: starts in >60min shows Starts in Xh Ym", () => {
 - [ ] **Step 3: Run tests — verify they fail (no helpers file yet)**
 
 ```bash
-cd /Users/donniebolen/Desktop/NowGo/mobile && npm test
+cd /Users/donniebolen/dev/NowGo/mobile && npm test
 ```
 
 Expected: `eventCardHelpers.test.ts` fails with `Cannot find module './eventCardHelpers.js'`. `usePreferences` tests still pass.
@@ -304,7 +304,7 @@ export function contextualLabelResult(
 - [ ] **Step 5: Run tests — verify helpers pass**
 
 ```bash
-cd /Users/donniebolen/Desktop/NowGo/mobile && npm test
+cd /Users/donniebolen/dev/NowGo/mobile && npm test
 ```
 
 Expected: all 14 tests pass, 0 failures.
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
 - [ ] **Step 2: Verify TypeScript compiles**
 
 ```bash
-cd /Users/donniebolen/Desktop/NowGo/mobile && npx tsc --noEmit
+cd /Users/donniebolen/dev/NowGo/mobile && npx tsc --noEmit
 ```
 
 Expected: no errors.
@@ -644,7 +644,7 @@ renderItem={({ item, index }) => (
 - [ ] **Step 2: Verify TypeScript compiles**
 
 ```bash
-cd /Users/donniebolen/Desktop/NowGo/mobile && npx tsc --noEmit
+cd /Users/donniebolen/dev/NowGo/mobile && npx tsc --noEmit
 ```
 
 Expected: no errors.
@@ -652,7 +652,7 @@ Expected: no errors.
 - [ ] **Step 3: Run all tests**
 
 ```bash
-cd /Users/donniebolen/Desktop/NowGo/mobile && npm test
+cd /Users/donniebolen/dev/NowGo/mobile && npm test
 ```
 
 Expected: all tests pass.
@@ -673,7 +673,7 @@ git commit -m "feat: pass stagger index to EventCard from TonightFeed"
 - [ ] **Step 1: Start the app**
 
 ```bash
-cd /Users/donniebolen/Desktop/NowGo/mobile && npx expo run:ios
+cd /Users/donniebolen/dev/NowGo/mobile && npx expo run:ios
 ```
 
 Or if Metro is already running, press `r` to reload.
