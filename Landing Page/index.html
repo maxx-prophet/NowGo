@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NowGo — Your city, tonight.</title>
-  <meta name="description" content="NowGo finds things you can actually get into right now — real-time availability, travel time, and a leave-by that works. NYC, coming soon." />
-  <meta property="og:title" content="NowGo — Your city, tonight." />
-  <meta property="og:description" content="The app that answers: what can I actually get into right now?" />
+  <title>NowGo — Your city, tonight. Now in beta.</title>
+  <meta name="description" content="NowGo shows what's on in New York tonight, tells you when to leave, and which rooms let you walk in. iOS beta open now on TestFlight." />
+  <meta property="og:title" content="NowGo — Your city, tonight. Now in beta." />
+  <meta property="og:description" content="What's on in NYC tonight, when to leave, and where you can walk in. Join the iOS beta." />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name='impact-site-verification' value='1d48550e-cbbe-4fe0-8a79-0e2759304933'>
@@ -222,6 +222,41 @@
       margin-top: 10px;
       letter-spacing: 0.04em;
     }
+    .cta-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--amber);
+      border-radius: 10px;
+      padding: 15px 26px;
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      color: #0a0a0a;
+      text-decoration: none;
+      letter-spacing: 0.04em;
+      transition: transform 0.15s, background 0.15s;
+    }
+    .cta-primary:hover { background: #fbbf24; transform: translateY(-1px); }
+    .cta-primary:active { transform: translateY(0); }
+    .cta-meta {
+      font-size: 10px;
+      color: var(--sub);
+      margin-top: 12px;
+      letter-spacing: 0.06em;
+    }
+    .form-secondary {
+      margin-top: 40px;
+      padding-top: 28px;
+      border-top: 1px solid var(--border);
+      max-width: 460px;
+    }
+    .form-secondary .form-label {
+      color: #a0a09a;
+      text-transform: none;
+      letter-spacing: 0.02em;
+      font-size: 12px;
+    }
     .form-success {
       display: none;
       font-size: 12px;
@@ -362,6 +397,35 @@
       letter-spacing: 0.08em;
     }
 
+    /* ── TESTER NOTES ── */
+    .tester-block {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 2px;
+      margin-top: 48px;
+      animation: fadeUp 0.7s ease 0.7s both;
+    }
+    .tester-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 24px;
+    }
+    .tester-item:first-child { border-radius: 12px 0 0 12px; }
+    .tester-item:last-child  { border-radius: 0 12px 12px 0; }
+    @media (max-width: 600px) {
+      .tester-item:first-child { border-radius: 12px 12px 0 0; }
+      .tester-item:last-child  { border-radius: 0 0 12px 12px; }
+    }
+    .tester-num {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      color: var(--amber);
+      margin-bottom: 14px;
+    }
+    .tester-text { font-size: 12px; color: var(--sub); line-height: 1.8; }
+    .tester-text a { color: var(--text); text-decoration: none; border-bottom: 1px solid var(--muted); }
+    .tester-text a:hover { border-color: var(--amber); }
+
     /* ── CITIES ── */
     .cities-row {
       display: flex;
@@ -403,6 +467,17 @@
       color: #2a2a2a;
       letter-spacing: 0.06em;
     }
+    .footer-links { display: flex; gap: 18px; }
+    .footer-links a {
+      font-size: 10px;
+      color: #4a4a4a;
+      letter-spacing: 0.06em;
+      text-decoration: none;
+    }
+    .footer-links a:hover { color: var(--sub); }
+    @media (max-width: 600px) {
+      footer { flex-direction: column; align-items: flex-start; gap: 14px; }
+    }
 
     /* ── ANIMATIONS ── */
     @keyframes fadeUp {
@@ -427,7 +502,7 @@
     <!-- NAV -->
     <nav>
       <span class="nav-logo">NowGo</span>
-      <span class="nav-badge">Coming soon</span>
+      <span class="nav-badge">Now in beta · iOS</span>
     </nav>
 
     <!-- HERO -->
@@ -437,18 +512,25 @@
         Your city,<br /><em>tonight.</em>
       </h1>
       <p class="hero-sub">
-        NowGo finds things you can <strong>actually get into right now</strong> — real-time availability, a leave-by time calculated from where you are, and one tap to commit. No more tabs. No more guessing.
+        NowGo shows <strong>what's on in New York tonight</strong> — concerts, jazz, comedy, sports — with a leave-by time worked out from where you're standing, and which rooms let you just walk in. No more tabs. No more guessing.
       </p>
 
-      <!-- EMAIL CAPTURE -->
+      <!-- BETA CTA -->
       <div class="form-wrap">
-        <div class="form-label">Get early access</div>
-        <div class="form-row">
-          <input class="form-input" type="email" id="emailInput" placeholder="your@email.com" />
-          <button class="form-btn" onclick="handleSubmit()">Notify me →</button>
+        <div class="form-label">The beta is open</div>
+        <a class="cta-primary" href="https://testflight.apple.com/join/kMKDNEkK" target="_blank" rel="noopener">Join the iOS beta on TestFlight →</a>
+        <p class="cta-meta">Free during beta · iPhone only · NYC only</p>
+
+        <!-- EMAIL FALLBACK -->
+        <div class="form-secondary">
+          <div class="form-label">Not on your iPhone right now? Get the link by email.</div>
+          <div class="form-row">
+            <input class="form-input" type="email" id="emailInput" placeholder="your@email.com" />
+            <button class="form-btn" onclick="handleSubmit()">Send me the link →</button>
+          </div>
+          <p class="form-note">No spam. Unsubscribe anytime.</p>
+          <p class="form-success" id="formSuccess">✓ Got it. We'll email you the link — or if you're on your iPhone, <a href="https://testflight.apple.com/join/kMKDNEkK" target="_blank" rel="noopener" style="color:inherit;">open it now →</a></p>
         </div>
-        <p class="form-note">NYC launch first. No spam. Unsubscribe anytime.</p>
-        <p class="form-success" id="formSuccess">✓ You're on the list. We'll be in touch.</p>
       </div>
     </section>
 
@@ -466,18 +548,18 @@
         </div>
         <div class="step">
           <div class="step-num">02</div>
-          <div class="step-title">See what's actually open</div>
-          <div class="step-desc">Real-time availability signals. No sold-out surprises. Walk-in events clearly labeled.</div>
+          <div class="step-title">See what's on tonight</div>
+          <div class="step-desc">Concerts, jazz, comedy and sports from Ticketmaster, SeatGeek and jazz-nyc.com — plus walk-in rooms we've checked ourselves.</div>
         </div>
         <div class="step">
           <div class="step-num">03</div>
           <div class="step-title">Know when to leave</div>
-          <div class="step-desc">Every result comes with a "leave by" time calculated from your current location.</div>
+          <div class="step-desc">Every result comes with a "leave by" time, worked out from where you are and whether you're taking the subway or walking.</div>
         </div>
         <div class="step">
           <div class="step-num">04</div>
           <div class="step-title">Or let us pick</div>
-          <div class="step-desc">Tap Surprise Me. We pick the single best option and hand you a one-tap commit.</div>
+          <div class="step-desc">Tap Surprise Me. We hand you one thing starting in the next 30–90 minutes that you can still make.</div>
         </div>
       </div>
 
@@ -486,22 +568,22 @@
         <div class="feature">
           <div class="feature-icon">⏱</div>
           <div class="feature-title">Leave by [time]</div>
-          <div class="feature-desc">Not just a start time — a personalized leave-by calculated from your GPS, accounting for subway or walking time.</div>
+          <div class="feature-desc">Not just a start time — a leave-by calculated from your location, accounting for subway or walking time.</div>
         </div>
         <div class="feature">
-          <div class="feature-icon">✅</div>
-          <div class="feature-title">Actually available</div>
-          <div class="feature-desc">Availability is checked in near-real-time. Sold-out events are hidden, not buried. We tell you when data was last verified.</div>
+          <div class="feature-icon">📤</div>
+          <div class="feature-title">Send it to someone</div>
+          <div class="feature-desc">Found the thing? One tap sends it to whoever you're meeting — time, place, leave-by and all.</div>
         </div>
         <div class="feature">
           <div class="feature-icon">🚶</div>
           <div class="feature-title">Walk-in welcome</div>
-          <div class="feature-desc">Jazz clubs, free park concerts, no-cover venues. The stuff a local would know. Surfaced alongside ticketed events.</div>
+          <div class="feature-desc">Jazz clubs and no-cover rooms, with what each venue actually says about walking in. We read their policies — and called Birdland to be sure.</div>
         </div>
         <div class="feature">
           <div class="feature-icon">✨</div>
           <div class="feature-title">Surprise Me</div>
-          <div class="feature-desc">Skip the options. Get one great recommendation and a single button to commit. Decisiveness as a feature.</div>
+          <div class="feature-desc">Skip the scrolling. One recommendation you can still get to, and a single button to commit. Decisiveness as a feature.</div>
         </div>
       </div>
     </section>
@@ -518,9 +600,30 @@
 
     <div class="divider"></div>
 
+    <!-- TESTER NOTES -->
+    <section class="section">
+      <div class="section-label">What we need from beta testers</div>
+      <div class="tester-block">
+        <div class="tester-item">
+          <div class="tester-num">01</div>
+          <div class="tester-text">Use it on a real night out. Open it at 6pm with no plan and see if it gets you somewhere.</div>
+        </div>
+        <div class="tester-item">
+          <div class="tester-num">02</div>
+          <div class="tester-text">When something is wrong — a venue that isn't walk-in, a leave-by that made you late, a blank screen — tell us. <a href="mailto:hello@nowgoapp.com">hello@nowgoapp.com</a>, or the TestFlight feedback button.</div>
+        </div>
+        <div class="tester-item">
+          <div class="tester-num">03</div>
+          <div class="tester-text">Expect rough edges. It's NYC only, iPhone only, and the listings are only as good as the sources feeding them. That's what you're here to help fix.</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
     <!-- CITIES -->
     <section class="section" style="padding-bottom: 48px;">
-      <div class="section-label">Launching in</div>
+      <div class="section-label">Cities</div>
       <div class="cities-row">
         <span class="city-chip active">🗽 New York City</span>
         <span class="city-chip">Los Angeles</span>
@@ -530,13 +633,18 @@
         <span class="city-chip">Washington DC</span>
         <span class="city-chip">Seattle</span>
         <span class="city-chip">Austin</span>
-        <span class="city-chip">More soon</span>
+        <span class="city-chip">Next, if the beta says so</span>
       </div>
     </section>
 
     <!-- FOOTER -->
     <footer>
       <span class="footer-logo">NowGo</span>
+      <div class="footer-links">
+        <a href="https://testflight.apple.com/join/kMKDNEkK" target="_blank" rel="noopener">TestFlight</a>
+        <a href="https://nowgoapp.com/privacy-policy/">Privacy</a>
+        <a href="mailto:hello@nowgoapp.com">hello@nowgoapp.com</a>
+      </div>
       <span class="footer-copy">© 2026 NowGo · New York City</span>
     </footer>
 
