@@ -198,9 +198,12 @@ const styles = StyleSheet.create({
   venueMuted: {
     color: "#4B5563",
   },
+  // Same greys as the detail screen's credit link. The old #4B5563 at 11px
+  // sat under 3:1 against the card and read as missing — which, for a credit
+  // we promised would be visible, it effectively was.
   credit: {
-    color: "#4B5563",
-    fontSize: 11,
+    color: "#9CA3AF",
+    fontSize: 12,
     marginBottom: 4,
   },
   hook: {

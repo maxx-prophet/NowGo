@@ -10,6 +10,7 @@ import { WALK_IN_SQL, fetchUncuratedVenues } from "./services/walk-in.js";
 import { NOT_ATTRACTION_SQL } from "./services/venue-type.js";
 import { checkPipelineToken } from "./services/pipeline-auth.js";
 import { withAttribution, withAttributionAll } from "./services/attribution.js";
+import { dedupeListings } from "./services/dedupe.js";
 import { renderUncuratedVenuesPage } from "./views/uncurated-venues.js";
 dotenv.config({ path: ".env.nowgo" });
 
@@ -140,7 +141,7 @@ app.get("/events/tonight", async (req, res) => {
     if (hasGeo) {
       query = `
         SELECT
-          e.event_id, e.source, e.name, e.start_time,
+          e.event_id, e.source, e.name, e.start_time, e.venue_id,
           ${EVENT_URL_SQL} AS url,
           e.segment, e.genre, e.price_min, e.price_max, e.is_free,
           e.availability_tier, e.last_checked_at, e.surprise_score,
@@ -171,7 +172,7 @@ app.get("/events/tonight", async (req, res) => {
     } else {
       query = `
         SELECT
-          e.event_id, e.source, e.name, e.start_time,
+          e.event_id, e.source, e.name, e.start_time, e.venue_id,
           ${EVENT_URL_SQL} AS url,
           e.segment, e.genre, e.price_min, e.price_max, e.is_free,
           e.availability_tier, e.last_checked_at, e.surprise_score,
@@ -202,7 +203,11 @@ app.get("/events/tonight", async (req, res) => {
     // the venue website as their url, so without this nothing names the source.
     // Applied here, before ranking and splitting, so every path out of this
     // handler carries it: feed, sold-out list and surprise picks alike.
-    const rows = withAttributionAll(raw);
+    //
+    // Then fold duplicate listings of the same set into one card. Credit is
+    // attached first so a jazz-nyc row folded into its Ticketmaster twin still
+    // hands its credit over — see services/dedupe.js for why that matters.
+    const rows = dedupeListings(withAttributionAll(raw));
 
     // Enrich with travel time when user location is known
     let filterable = hasGeo
