@@ -2,9 +2,9 @@ import { useEffect, useState, useCallback } from "react";
 import {
   View, Text, FlatList, TouchableOpacity,
   ActivityIndicator, StyleSheet, RefreshControl, Linking,
-  useWindowDimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { useCramped } from "../hooks/useCramped";
 import EventCard from "../components/EventCard";
 import FilterSheet from "../components/FilterSheet";
 import SurpriseSheet from "../components/SurpriseSheet";
@@ -64,8 +64,7 @@ export default function TonightFeed({ navigation }: Props) {
   // which grow with the text and do not shrink. At large Dynamic Type sizes
   // they squeeze the chip lane down to a sliver, so give the chips their own
   // row instead.
-  const { fontScale } = useWindowDimensions();
-  const stackedFilters = fontScale >= 1.35;
+  const stackedFilters = useCramped();
   const [budgetMax, setBudgetMax] = useState<BudgetMax>(NO_BUDGET);
   const [mode, setMode] = useState<"transit" | "walk" | "drive">("transit");
   const [sortBy, setSortBy] = useState<"best" | "soonest" | "nearest" | "cheapest">("best");

@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, PanResponder, GestureResponderEvent, PanResponderGestureState, useWindowDimensions } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, PanResponder, GestureResponderEvent, PanResponderGestureState } from "react-native";
+import { useCramped } from "../../hooks/useCramped";
 import { usePreferencesContext } from "../../contexts/PreferencesContext";
 import { usePostHog } from "posthog-react-native";
 import BackButton from "../../components/BackButton";
@@ -16,8 +17,7 @@ const SNAPS: { label: string; value: number | null; sub: string }[] = [
 export default function BudgetScreen({ navigation }: { navigation: OnboardingNavProp<"Budget"> }) {
   // Hand the generous fixed chrome back to the text at large Dynamic Type
   // sizes, so the screen mostly fits instead of only being scrollable.
-  const { fontScale } = useWindowDimensions();
-  const compact = fontScale >= 1.35;
+  const compact = useCramped();
   const { preferences, savePreferences } = usePreferencesContext();
   const posthog = usePostHog();
   const [budget, setBudget] = useState<number | null>(preferences.budgetMax);

@@ -5,8 +5,8 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  useWindowDimensions,
 } from "react-native";
+import { useCramped } from "../../hooks/useCramped";
 import { usePreferencesContext } from "../../contexts/PreferencesContext";
 import { usePostHog } from "posthog-react-native";
 import BackButton from "../../components/BackButton";
@@ -28,8 +28,7 @@ export default function IdentityScreen({ navigation }: { navigation: OnboardingN
   // instead of squeezing it, and give the generous fixed chrome — an 80pt top
   // pad, a 40pt gap above the choices, 24pt card padding — back to the text,
   // so the first option is readable without scrolling for it.
-  const { fontScale } = useWindowDimensions();
-  const stacked = fontScale >= 1.35;
+  const stacked = useCramped();
 
   async function onContinue() {
     await savePreferences({ identity: selected });

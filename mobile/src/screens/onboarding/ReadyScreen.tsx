@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet , useWindowDimensions } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet  } from "react-native";
+import { useCramped } from "../../hooks/useCramped";
 import { usePreferencesContext } from "../../contexts/PreferencesContext";
 import { usePostHog } from "posthog-react-native";
 import BackButton from "../../components/BackButton";
@@ -20,8 +21,7 @@ function budgetLabel(max: number | null): string {
 export default function ReadyScreen({ navigation }: { navigation: OnboardingNavProp<"Ready"> }) {
   // Hand the generous fixed chrome back to the text at large Dynamic Type
   // sizes, so the screen mostly fits instead of only being scrollable.
-  const { fontScale } = useWindowDimensions();
-  const compact = fontScale >= 1.35;
+  const compact = useCramped();
   const { preferences, completeOnboarding, savePreferences } = usePreferencesContext();
   const posthog = usePostHog();
 

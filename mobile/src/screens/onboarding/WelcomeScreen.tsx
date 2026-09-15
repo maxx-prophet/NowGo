@@ -1,13 +1,13 @@
 import React from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet , useWindowDimensions } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet  } from "react-native";
 import { usePostHog } from "posthog-react-native";
+import { useCramped } from "../../hooks/useCramped";
 import type { OnboardingNavProp } from "../../types";
 
 export default function WelcomeScreen({ navigation }: { navigation: OnboardingNavProp<"Welcome"> }) {
   // Hand the generous fixed chrome back to the text at large Dynamic Type
   // sizes, so the screen mostly fits instead of only being scrollable.
-  const { fontScale } = useWindowDimensions();
-  const compact = fontScale >= 1.35;
+  const compact = useCramped();
   const posthog = usePostHog();
 
   return (

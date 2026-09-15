@@ -1,7 +1,8 @@
 import React, { useRef, useEffect } from "react";
 import {
-  View, Text, TouchableOpacity, StyleSheet, Animated, useWindowDimensions,
+  View, Text, TouchableOpacity, StyleSheet, Animated,
 } from "react-native";
+import { useCramped } from "../hooks/useCramped";
 import type { Event } from "../types";
 import {
   formatTime, formatPrice, leaveByResult, contextualLabelResult, getAvailabilityBadge,
@@ -72,8 +73,7 @@ export default function EventCard({ event, onPress, index = 0, hasOrigin = true 
   // At large Dynamic Type sizes the rigid side wins and crushes the label to an
   // ellipsis — "Starts in 25 min" rendered as "St…", which is the most
   // time-sensitive line on the card. Stack them instead of squeezing.
-  const { fontScale } = useWindowDimensions();
-  const stacked = fontScale >= 1.35;
+  const stacked = useCramped();
 
   return (
     <Animated.View style={{ opacity, transform: [{ translateY }] }}>
