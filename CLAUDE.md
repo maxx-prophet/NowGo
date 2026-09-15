@@ -263,6 +263,14 @@ Verify what a build will actually see with:
   your HEAD.
 - `eas.json` uses `appVersionSource: "remote"`, so `ios.buildNumber` in
   `app.config.js` is ignored. `autoIncrement` is on for the production profile.
+- **A finished build reaches only the internal group.** `eas build` → `eas
+  submit` puts the build in TestFlight and on "Team (Expo)" (Donnie). The public
+  link hands out whatever is newest on **"Friends and Family"**, and a build only
+  gets there when it is assigned to that group — which triggers Beta App Review.
+  This was missed on build 4 (Aug 21) and again on build 9 (Sep 8): testers on
+  the link were reporting bugs against a build two releases old. After every
+  build: assign it to Friends and Family, then confirm with
+  `GET /v1/betaGroups/{id}/builds` (or the TestFlight tab in App Store Connect).
 - App Store icons must be **square 1024×1024 with no alpha**. The source wordmark
   is preserved at `mobile/assets/_wordmark-source.png`; `icon.png` is a stacked
   lockup generated from it. `splash-icon.png` is intentionally the wide wordmark,
