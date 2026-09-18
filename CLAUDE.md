@@ -96,6 +96,12 @@ large `skipped` count is not normal.
 rounds of black-box probing from outside told me less than one log dump. Ask for
 the deploy logs early.
 
+**`railway logs` strips timestamps; `railway logs --json` keeps them.** Every
+run now ends with a `⏱  Pipeline stages` block (slowest first), but for runs
+before that landed, or to time anything the block does not cover, diff the
+`timestamp` field between consecutive JSON lines. Delivery lag is a few
+seconds, so gaps under ~5s are noise.
+
 **Railway does NOT run database migrations.** `railway.toml` only sets
 `startCommand`; there is no migrate step in the deploy. Schema-dependent code
 must not be merged until `npm run migrate` has been applied to production by

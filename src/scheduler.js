@@ -11,6 +11,7 @@ import { runGenreEnrichment } from "./services/genre-enrichment.js";
 import { runSurpriseScore } from "./services/surprise-score.js";
 import { runVenueEmbeddings } from "./services/venue-embeddings.js";
 import { runHookGeneration } from "./services/hook-generation.js";
+import { createStageTimer } from "./services/pipeline-timing.js";
 import pool from "../db/index.js";
 
 // ─── ALIAS MAP ───────────────────────────────────────────────────────────────
@@ -33,23 +34,28 @@ export async function runPipeline() {
   const started = new Date().toISOString();
   console.log(`\n⏰ [${started}] Pipeline starting...`);
 
+  // Every stage is wrapped so the run ends with a slowest-first breakdown.
+  // Railway's log viewer has no per-line timestamps, so this is the only way
+  // a run can say where its time went.
+  const timer = createStageTimer();
+
   try {
-    const tmEvents = await fetchTicketmaster();
+    const tmEvents = await timer.stage("fetch:ticketmaster", fetchTicketmaster);
     console.log(`  ✅ Ticketmaster: ${tmEvents.length} events`);
 
     const aliasMap = await loadAliasMap();
     console.log(`  🗺  Loaded ${aliasMap.size} venue aliases`);
 
-    const mergedEvents = await fetchSeatGeek(tmEvents, aliasMap, pool);
+    const mergedEvents = await timer.stage("fetch:seatgeek+merge", () => fetchSeatGeek(tmEvents, aliasMap, pool));
     console.log(`  ✅ SeatGeek merged: ${mergedEvents.length} total events`);
 
-    const jazzEvents = await fetchJazzNYC();
+    const jazzEvents = await timer.stage("fetch:jazz-nyc", fetchJazzNYC);
     console.log(`  ✅ Jazz NYC: ${jazzEvents.length} events`);
 
     const allEvents = [...mergedEvents, ...jazzEvents];
     console.log(`  💾 Ingesting ${allEvents.length} events...`);
 
-    const { ok, skipped } = await ingestEvents(allEvents);
+    const { ok, skipped } = await timer.stage("ingest", () => ingestEvents(allEvents));
     console.log(`  💾 Ingested ${ok} events, skipped ${skipped}`);
 
     // Must run after ingest so new venue rows exist. Isolated in its own
@@ -57,10 +63,10 @@ export async function runPipeline() {
     // API and quota, and a failure in either must not skip the enrichment
     // steps below.
     try {
-      await geocodeVenues();
+      await timer.stage("geocode", geocodeVenues);
       // Only touches venues that still have no website, so this is a no-op on
       // most runs and only pays for lookups when a new venue appears.
-      await backfillVenueWebsites();
+      await timer.stage("venue-websites", backfillVenueWebsites);
     } catch (err) {
       console.error(`  ❌ Venue enrichment failed (continuing): ${err.message}`);
     }
@@ -71,7 +77,7 @@ export async function runPipeline() {
     // external-API reasons the block above can, and should still run when
     // geocoding failed on quota.
     try {
-      await backfillNeighborhoods();
+      await timer.stage("neighborhoods", backfillNeighborhoods);
     } catch (err) {
       console.error(`  ❌ Neighborhood backfill failed (continuing): ${err.message}`);
     }
@@ -81,20 +87,25 @@ export async function runPipeline() {
     // Separate try/catch: this is a plain DB query with no external
     // dependency, so it cannot fail for the same reasons as the block above.
     try {
-      await reportUncuratedVenues();
+      await timer.stage("walk-in-report", reportUncuratedVenues);
     } catch (err) {
       console.error(`  ❌ Walk-in curation report failed (continuing): ${err.message}`);
     }
 
-    await runVenueEmbeddings();
+    await timer.stage("venue-embeddings", runVenueEmbeddings);
     console.log(`  🔢 Venue embeddings complete`);
-    await runAvailabilityCheck();
-    await runGenreEnrichment();
-    await runSurpriseScore();
-    await runHookGeneration();
-    console.log(`  🏁 Pipeline complete [${new Date().toISOString()}]\n`);
+    await timer.stage("availability", runAvailabilityCheck);
+    await timer.stage("genre-enrichment", runGenreEnrichment);
+    await timer.stage("surprise-score", runSurpriseScore);
+    await timer.stage("hook-generation", runHookGeneration);
+    console.log(`  🏁 Pipeline complete [${new Date().toISOString()}]`);
   } catch (err) {
-    console.error(`  ❌ Pipeline failed: ${err.message}\n`);
+    console.error(`  ❌ Pipeline failed: ${err.message}`);
+  } finally {
+    // Printed on failure too: a run that died mid-way still tells you which
+    // stage it got stuck in.
+    timer.report();
+    console.log("");
   }
 }
 
