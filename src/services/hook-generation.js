@@ -3,7 +3,14 @@ import dotenv from "dotenv";
 import pool from "../../db/index.js";
 dotenv.config({ path: ".env.nowgo" });
 
-const client = new Anthropic();
+// Haiku calls are independent, so run several at once. 100 events in
+// series took ~110s (80% of the 10am pipeline run); 8 at a time is ~15s.
+const HOOK_CONCURRENCY = 8;
+
+let client;
+function anthropic() {
+  return (client ??= new Anthropic());
+}
 
 function buildPrompt(event) {
   const price = event.is_free
@@ -51,27 +58,47 @@ export async function runHookGeneration() {
   }
 
   console.log(`  🪝 Hook generation: generating for ${rows.length} events...`);
-  let generated = 0;
-  let failed = 0;
 
-  for (const event of rows) {
-    try {
-      const message = await client.messages.create({
+  const { generated, failed } = await generateHooks(rows, {
+    generate: async event => {
+      const message = await anthropic().messages.create({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 60,
         messages: [{ role: "user", content: buildPrompt(event) }],
       });
+      return message.content[0]?.text;
+    },
+    save: (eventId, hook) => pool.query(`UPDATE events SET hook = $1 WHERE event_id = $2`, [hook, eventId]),
+    concurrency: HOOK_CONCURRENCY,
+  });
 
-      const hook = message.content[0]?.text?.trim();
-      if (hook) {
-        await pool.query(`UPDATE events SET hook = $1 WHERE event_id = $2`, [hook, event.event_id]);
-        generated++;
+  console.log(`  ✅ Hook generation: ${generated} generated, ${failed} failed`);
+}
+
+// Generate and save a hook for every event, at most `concurrency` calls in
+// flight at once. A failure on one event is warned about and counted; it
+// never stops the rest.
+export async function generateHooks(events, { generate, save, concurrency, warn = console.warn }) {
+  let generated = 0;
+  let failed = 0;
+  let next = 0;
+
+  async function worker() {
+    while (next < events.length) {
+      const event = events[next++];
+      try {
+        const hook = (await generate(event))?.trim();
+        if (hook) {
+          await save(event.event_id, hook);
+          generated++;
+        }
+      } catch (err) {
+        warn(`    ⚠ Hook failed for ${event.event_id}: ${err.message}`);
+        failed++;
       }
-    } catch (err) {
-      console.warn(`    ⚠ Hook failed for ${event.event_id}: ${err.message}`);
-      failed++;
     }
   }
 
-  console.log(`  ✅ Hook generation: ${generated} generated, ${failed} failed`);
+  await Promise.all(Array.from({ length: Math.min(concurrency, events.length) }, worker));
+  return { generated, failed };
 }
