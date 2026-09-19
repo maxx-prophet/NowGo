@@ -2,7 +2,7 @@ import fetch from "node-fetch";
 import fs from "fs";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
-import { findVenueByEmbedding } from "../services/venue-embeddings.js";
+import { findVenuesByEmbedding } from "../services/venue-embeddings.js";
 import { tonightWindow } from "../services/tonight-window.js";
 dotenv.config({ path: ".env.nowgo" });
 
@@ -150,22 +150,23 @@ function stringsOverlap(a, b) {
   return na.slice(0, len) === nb.slice(0, len);
 }
 
-export async function mergeEvents(tmEvents, sgEvents, aliasMap = new Map(), dbPool = null) {
+export async function mergeEvents(
+  tmEvents, sgEvents, aliasMap = new Map(), dbPool = null,
+  { resolveVenues = findVenuesByEmbedding } = {}
+) {
   function resolveVenueName(name, pgCache) {
     const n = norm(name);
     return pgCache.get(n) ?? aliasMap.get(n) ?? n;
   }
 
-  // Pre-resolve all unique SG venue names via pgvector (one OpenAI call per unique venue)
+  // Pre-resolve the SG venue names no alias covers via pgvector, all in one
+  // embedding request.
   const pgVenueCache = new Map();
   if (dbPool) {
-    const uniqueVenues = [...new Set(sgEvents.map(sg => sg.venue).filter(Boolean))];
-    for (const venueName of uniqueVenues) {
-      const n = norm(venueName);
-      if (aliasMap.has(n)) continue; // alias already covers it
-      const canonical = await findVenueByEmbedding(dbPool, venueName);
-      if (canonical) pgVenueCache.set(n, norm(canonical));
-    }
+    const uniqueVenues = [...new Set(sgEvents.map(sg => sg.venue).filter(Boolean))]
+      .filter(name => !aliasMap.has(norm(name)));
+    const canonical = await resolveVenues(dbPool, uniqueVenues);
+    for (const [name, venue] of canonical) pgVenueCache.set(norm(name), norm(venue));
     if (pgVenueCache.size > 0) {
       console.log(`   🧠 pgvector resolved ${pgVenueCache.size} venue(s) semantically`);
     }

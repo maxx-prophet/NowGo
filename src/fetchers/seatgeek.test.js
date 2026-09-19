@@ -247,3 +247,25 @@ test("normalize never emits a lowercase league as a segment", () => {
   };
   assert.equal(normalizeSeatGeekEvent(event).segment, "Sports");
 });
+
+// ─── SEMANTIC VENUE RESOLUTION ───────────────────────────────────────────────
+
+test("mergeEvents resolves every unaliased SeatGeek venue in one batch, skipping aliased ones", async () => {
+  const batches = [];
+  const resolveVenues = async (_pool, names) => {
+    batches.push(names);
+    return new Map([["MSG Arena", "Madison Square Garden"]]);
+  };
+  const aliasMap = new Map([["thebeacon", "beacontheatre"]]);
+  const sg = [
+    makeSgEvent({ id: "sg_1", venue: "MSG Arena" }),
+    makeSgEvent({ id: "sg_2", venue: "MSG Arena", name: "Other" }),
+    makeSgEvent({ id: "sg_3", venue: "The Beacon", name: "Other" }),
+  ];
+  const tm = [makeTmEvent({ venue: "Madison Square Garden" })];
+
+  const result = await mergeEvents(tm, sg, aliasMap, { query: async () => ({ rows: [] }) }, { resolveVenues });
+
+  assert.deepEqual(batches, [["MSG Arena"]], "one call, deduped, aliased name left out");
+  assert.equal(result[0].priceMin, 50, "the semantic match still fills the price");
+});
