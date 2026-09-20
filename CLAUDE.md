@@ -313,6 +313,12 @@ Verify what a build will actually see with:
   the link were reporting bugs against a build two releases old. After every
   build: assign it to Friends and Family, then confirm with
   `GET /v1/betaGroups/{id}/builds` (or the TestFlight tab in App Store Connect).
+- **Add to Calendar needs no calendar permission.** It goes through
+  `expo-calendar`'s `createEventInCalendarAsync`, the system event editor, so
+  there is no `requestCalendarPermissionsAsync`, no privacy-manifest change
+  and no new App Privacy answer. Do not "upgrade" it to `createEventAsync`
+  without taking all three on. The reminder is the leave-by time when it is
+  still ahead, else 30 minutes before (`mobile/src/services/calendar.ts`).
 - App Store icons must be **square 1024×1024 with no alpha**. The source wordmark
   is preserved at `mobile/assets/_wordmark-source.png`; `icon.png` is a stacked
   lockup generated from it. `splash-icon.png` is intentionally the wide wordmark,

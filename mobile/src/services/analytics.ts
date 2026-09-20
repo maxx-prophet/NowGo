@@ -30,6 +30,13 @@ export function useAnalytics() {
     eventShared: (eventId: string, availabilityTier: string) =>
       posthog?.capture("event_shared", { event_id: eventId, availability_tier: availabilityTier }),
 
+    // The system event editor reports whether the entry was saved or the
+    // sheet dismissed, so unlike a share this can carry the outcome. The
+    // alarm kind says whether the app's own leave-by time made it into the
+    // calendar — the whole reason the feature exists.
+    eventSavedToCalendar: (eventId: string, action: string, alarmKind: string) =>
+      posthog?.capture("event_saved_to_calendar", { event_id: eventId, action, alarm_kind: alarmKind }),
+
     // Taps on a listing source's credit line. We promised jazz-nyc.com the
     // click it never gets today, so this is the number we can actually report
     // back to them rather than asserting the credit is "visible".

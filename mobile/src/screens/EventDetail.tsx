@@ -6,6 +6,8 @@ import { getAvailabilityBadge, formatTimeSpan } from "../components/eventCardHel
 import { useAnalytics } from "../services/analytics";
 import { walkInNotice } from "../services/walkIn";
 import { shareMessage } from "../services/share";
+import { calendarEntryFor } from "../services/calendar";
+import * as Calendar from "expo-calendar";
 
 interface Props {
   route: AppRouteProp<"EventDetail">;
@@ -40,6 +42,13 @@ function formatPrice(min: number | null | undefined, max: number | null | undefi
   if (min == null && max == null) return "Price unavailable";
   if (max == null || min === max) return `$${Number(min).toFixed(2)}`;
   return `$${Number(min).toFixed(2)} – $${Number(max).toFixed(2)}`;
+}
+
+// The button says what the reminder will be, so the leave-by is not a
+// surprise inside the calendar entry.
+function entryAlarmLabel(leaveBy: string | null | undefined): string {
+  const ahead = !!leaveBy && new Date(leaveBy).getTime() > Date.now();
+  return ahead ? "📅 Add to Calendar · reminder at leave-by time" : "📅 Add to Calendar";
 }
 
 function leaveByDisplay(leaveBy: string | null | undefined): { label: string; color: string } | null {
@@ -284,6 +293,40 @@ export default function EventDetail({ route, navigation }: Props) {
           }}
         >
           <Text style={styles.shareBtnText}>↗ Share</Text>
+        </TouchableOpacity>
+
+        {/* Add to Calendar. Goes through the system event editor, which needs
+            no calendar permission — the user sees the prefilled entry and
+            saves it themselves. The alarm is the leave-by time when it is
+            still ahead (computed at tap, like Share), else 30 minutes before;
+            the entry's notes say which, and where the leave-by came from. */}
+        <TouchableOpacity
+          style={styles.shareBtn}
+          onPress={async () => {
+            const entry = calendarEntryFor(event, leaveBy);
+            try {
+              const result = await Calendar.createEventInCalendarAsync({
+                title: entry.title,
+                startDate: entry.startDate,
+                endDate: entry.endDate,
+                location: entry.location ?? undefined,
+                url: entry.url,
+                notes: entry.notes,
+                alarms: entry.alarms.map((a) =>
+                  "absoluteDate" in a ? { absoluteDate: a.absoluteDate } : { relativeOffset: a.relativeOffset }
+                ),
+                timeZone: "America/New_York",
+              });
+              analytics.eventSavedToCalendar(event.event_id, result.action, entry.alarmKind);
+            } catch {
+              // The editor failed to open or was dismissed mid-way. Nothing
+              // for the user to fix, so nothing to say.
+            }
+          }}
+        >
+          <Text style={styles.shareBtnText}>
+            {entryAlarmLabel(leaveBy)}
+          </Text>
         </TouchableOpacity>
       </View>
 

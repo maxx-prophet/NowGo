@@ -40,6 +40,15 @@ export default ({ config }) => ({
           "NowGo uses your location to show events near you and estimate your travel time.",
       },
     ],
+    [
+      // Only the system event editor is used (createEventInCalendarAsync),
+      // which needs no permission; the string is here so the key exists if
+      // Apple ever requires it for linking EventKit.
+      "expo-calendar",
+      {
+        calendarPermission: "NowGo adds an event to your calendar only when you ask it to.",
+      },
+    ],
     "./plugins/withPrivacyManifest",
   ],
   extra: {
