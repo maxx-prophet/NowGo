@@ -5,7 +5,7 @@ import {
 import { useCramped } from "../hooks/useCramped";
 import type { Event } from "../types";
 import {
-  formatTime, formatPrice, leaveByResult, contextualLabelResult, getAvailabilityBadge,
+  formatTimeSpan, formatPrice, leaveByResult, contextualLabelResult, getAvailabilityBadge,
 } from "./eventCardHelpers";
 
 const SEGMENT_COLORS: Record<string, string> = {
@@ -65,7 +65,7 @@ export default function EventCard({ event, onPress, index = 0, hasOrigin = true 
   const emoji = SEGMENT_EMOJI[event.segment ?? ""] ?? "📍";
   const badge = getAvailabilityBadge(event.availability_tier, event.start_time, now);
   const price = formatPrice(event.price_min, event.price_max, event.is_free);
-  const timeStr = formatTime(event.start_time);
+  const timeStr = formatTimeSpan(event.start_time, event.showtimes);
   const lb = leaveByResult(event.leave_by, event.availability_tier, now);
   const ctx = contextualLabelResult(event.start_time, event.travel_minutes, now, hasOrigin);
 

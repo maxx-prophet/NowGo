@@ -155,3 +155,24 @@ test("contextualLabelResult: an underway event reads as underway with no origin"
   const startTime = new Date("2026-08-21T18:00:00Z").toISOString();
   assert.equal(contextualLabelResult(startTime, null, now, false).text, "Underway");
 });
+
+// formatTimeSpan
+import { formatTimeSpan } from "./eventCardHelpers.ts";
+
+test("formatTimeSpan: a single start is just the time", () => {
+  assert.equal(formatTimeSpan("2026-09-19T20:45:00.000Z", undefined), "4:45 PM");
+});
+
+test("formatTimeSpan: timed-entry slots read as a range from first to last", () => {
+  const slots = ["2026-09-19T20:45:00.000Z", "2026-09-19T21:00:00.000Z", "2026-09-19T23:45:00.000Z"];
+  assert.equal(formatTimeSpan("2026-09-19T20:45:00.000Z", slots), "4:45–7:45 PM");
+});
+
+test("formatTimeSpan: a range crossing noon keeps both meridiems", () => {
+  const slots = ["2026-09-19T15:00:00.000Z", "2026-09-19T17:00:00.000Z", "2026-09-19T19:00:00.000Z"];
+  assert.equal(formatTimeSpan("2026-09-19T15:00:00.000Z", slots), "11:00 AM–3:00 PM");
+});
+
+test("formatTimeSpan: one listed slot is not a range", () => {
+  assert.equal(formatTimeSpan("2026-09-19T20:45:00.000Z", ["2026-09-19T20:45:00.000Z"]), "4:45 PM");
+});

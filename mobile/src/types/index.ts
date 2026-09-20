@@ -14,6 +14,11 @@ export interface Event {
   name: string;
   start_time: string;
   end_time?: string | null;
+  // Present when the API folded a run of timed-entry slots (a museum's
+  // every-15-minutes admissions) into this one card. start_time is the first
+  // slot that can still be bought; these are every slot, in order.
+  showtimes?: string[] | null;
+  showtime_count?: number | null;
   url?: string | null;
   segment?: string | null;
   genre?: string | null;

@@ -44,6 +44,17 @@ export function formatTime(iso: string): string {
   });
 }
 
+// A museum's timed-entry slots arrive as one card with `showtimes`, so the
+// time on it is the span of entry times, not the first slot alone.
+export function formatTimeSpan(iso: string, showtimes: string[] | null | undefined): string {
+  if (!showtimes || showtimes.length < 2) return formatTime(iso);
+  const first = formatTime(showtimes[0]);
+  const last = formatTime(showtimes[showtimes.length - 1]);
+  const [firstTime, firstMeridiem] = first.split(" ");
+  const [, lastMeridiem] = last.split(" ");
+  return firstMeridiem === lastMeridiem ? `${firstTime}–${last}` : `${first}–${last}`;
+}
+
 export function formatPrice(
   min: number | null | undefined,
   max: number | null | undefined,

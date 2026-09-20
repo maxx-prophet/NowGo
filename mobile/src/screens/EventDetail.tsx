@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Linking, Share, StyleSheet, ActivityIndicator } from "react-native";
 import type { AppNavProp, AppRouteProp, TravelMode, Event } from "../types";
 import { fetchTravel, fetchEvent } from "../api/nowgo";
-import { getAvailabilityBadge } from "../components/eventCardHelpers";
+import { getAvailabilityBadge, formatTimeSpan } from "../components/eventCardHelpers";
 import { useAnalytics } from "../services/analytics";
 import { walkInNotice } from "../services/walkIn";
 import { shareMessage } from "../services/share";
@@ -166,10 +166,15 @@ export default function EventDetail({ route, navigation }: Props) {
         {event.neighborhood ? <Text style={styles.neighborhood}>{event.neighborhood}</Text> : null}
       </View>
 
-      {/* Start time */}
+      {/* Start time — or, for a timed-entry admission, the span of slots */}
       <View style={styles.section}>
-        <Text style={styles.sectionLabel}>START TIME</Text>
+        <Text style={styles.sectionLabel}>{event.showtime_count ? "ENTRY TIMES" : "START TIME"}</Text>
         <Text style={styles.sectionValue}>{formatStartTime(event.start_time)}</Text>
+        {event.showtimes && event.showtime_count ? (
+          <Text style={styles.sectionSub}>
+            {event.showtime_count} entry times, {formatTimeSpan(event.start_time, event.showtimes)}
+          </Text>
+        ) : null}
       </View>
 
       {/* Price */}
