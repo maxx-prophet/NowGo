@@ -73,14 +73,18 @@ async function upsertVenue(client, event) {
     ? neighborhoodFor(Number(event.lat), Number(event.lng))
     : null;
 
+  // A website the source itself links to (jazz-nyc's venue cell href) beats
+  // the one Google Place Details guessed from the name, so it wins the
+  // COALESCE. Sources that send none leave whatever is there.
   const { rows } = await client.query(
-    `INSERT INTO venues (name, address, neighborhood, geo_lat, geo_lng)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO venues (name, address, neighborhood, geo_lat, geo_lng, website)
+     VALUES ($1, $2, $3, $4, $5, $6)
      ON CONFLICT (lower(name)) DO UPDATE
        SET address      = COALESCE(EXCLUDED.address, venues.address),
            neighborhood = COALESCE(EXCLUDED.neighborhood, venues.neighborhood),
            geo_lat      = COALESCE(EXCLUDED.geo_lat, venues.geo_lat),
            geo_lng      = COALESCE(EXCLUDED.geo_lng, venues.geo_lng),
+           website      = COALESCE(EXCLUDED.website, venues.website),
            updated_at   = now()
      RETURNING venue_id`,
     [
@@ -89,6 +93,7 @@ async function upsertVenue(client, event) {
       derivedNeighborhood,
       hasGeo ? event.lat : null,
       hasGeo ? event.lng : null,
+      event.venueUrl ?? null,
     ]
   );
   return rows[0].venue_id;

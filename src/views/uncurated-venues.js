@@ -44,9 +44,19 @@ function renderRow(venue) {
       )}</a>`
     : `<span class="muted">no site</span>`;
 
+  // Another venue row already using this website. jazz-nyc.com relabels rooms
+  // ("Django(The)" → "The Django") and each label becomes its own venue with
+  // its own, empty, curation. The href is what stays put, so a newcomer on a
+  // known site is most likely an old venue under a new name — merge it via
+  // venue_aliases rather than curating twice. Not automatic: smallslive.com
+  // really is three rooms.
+  const sameSite = venue.same_site_as
+    ? `<div class="note">same site as ${escapeHtml(venue.same_site_as)}</div>`
+    : "";
+
   return `<tr>
     <td class="count">${venue.events}</td>
-    <td class="name">${escapeHtml(venue.name)}</td>
+    <td class="name">${escapeHtml(venue.name)}${sameSite}</td>
     <td class="muted">${escapeHtml(venue.neighborhood || "—")}</td>
     <td class="muted nowrap">${escapeHtml(formatNextEvent(venue.next_event))}</td>
     <td>${site}</td>
@@ -103,6 +113,7 @@ export function renderUncuratedVenuesPage(venues, { generatedAt = new Date() } =
   tbody tr:hover { background: var(--card); }
   .count { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--accent); width: 3.5rem; }
   .name { font-weight: 600; }
+  .note { font-weight: 400; font-size: 0.85em; color: #b45309; }
   .muted { color: var(--muted); }
   .nowrap { white-space: nowrap; }
   a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }

@@ -36,12 +36,27 @@ export const WALK_IN_SQL = `COALESCE(v.walk_in_policy, 'unknown') IN (${WALK_IN_
 // Returns more than the log line uses: GET /venues/uncurated renders the same
 // rows as a page you can actually work from, and the website is what makes a
 // row actionable — it is where you check whether the venue takes walk-ins.
+//
+// `same_site_as` names other venues on the same website. jazz-nyc.com relabels
+// rooms and each new label becomes a new venue row with empty curation; the
+// href is the stable part, so an uncurated venue sharing a site with a known
+// one is probably a relabel to merge, not a room to curate. Decided by a
+// human — smallslive.com legitimately covers three rooms.
 export async function fetchUncuratedVenues(pool = poolDefault) {
   const { rows } = await pool.query(
-    `SELECT v.venue_id, v.name, v.neighborhood, v.website,
-            count(e.event_id)::int AS events,
-            min(e.start_time)      AS next_event,
-            string_agg(DISTINCT e.source, ', ' ORDER BY e.source) AS sources
+    `WITH sites AS (
+       SELECT venue_id, name,
+              lower(regexp_replace(website, '^https?://(www\\.)?|/+$', '', 'g')) AS site
+         FROM venues
+        WHERE website IS NOT NULL
+     )
+     SELECT v.venue_id, v.name, v.neighborhood, v.website,
+            count(DISTINCT e.event_id)::int AS events,
+            min(e.start_time)               AS next_event,
+            string_agg(DISTINCT e.source, ', ' ORDER BY e.source) AS sources,
+            (SELECT string_agg(o.name, ', ' ORDER BY o.name)
+               FROM sites s JOIN sites o ON o.site = s.site AND o.venue_id <> s.venue_id
+              WHERE s.venue_id = v.venue_id) AS same_site_as
        FROM venues v
        JOIN events e ON e.venue_id = v.venue_id
       WHERE COALESCE(v.walk_in_policy, 'unknown') = 'unknown'
@@ -63,5 +78,12 @@ export async function reportUncuratedVenues(pool = poolDefault) {
   } else {
     console.log("  🚶 All venues with events have a walk-in policy");
   }
-  return { total: names.length, names };
+  // The relabel signal: an uncurated venue on a site a known venue already
+  // uses. Logged on its own line so a drift is visible in the run, not only
+  // on the worklist page.
+  const relabels = rows.filter((r) => r.same_site_as);
+  for (const r of relabels) {
+    console.log(`  🔁 "${r.name}" shares a site with ${r.same_site_as} — relabel? merge via venue_aliases`);
+  }
+  return { total: names.length, names, relabels: relabels.map((r) => r.name) };
 }

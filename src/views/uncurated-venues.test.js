@@ -118,3 +118,20 @@ test("the page is not indexable", () => {
   const html = renderUncuratedVenuesPage([venue()]);
   assert.match(html, /<meta name="robots" content="noindex">/);
 });
+
+test("a venue sharing its site with a known venue says so — it may be a relabel, not a new room", () => {
+  const html = renderUncuratedVenuesPage([
+    venue({ name: "Flatiron RoomNomad", same_site_as: "The Flatiron / Nomad" }),
+  ]);
+  assert.match(html, /same site as The Flatiron \/ Nomad/);
+});
+
+test("a venue with no site-sharing neighbour gets no such note", () => {
+  const html = renderUncuratedVenuesPage([venue({ same_site_as: null })]);
+  assert.doesNotMatch(html, /same site as/);
+});
+
+test("a site-sharing neighbour's name cannot inject markup", () => {
+  const html = renderUncuratedVenuesPage([venue({ same_site_as: "<img src=x onerror=alert(1)>" })]);
+  assert.doesNotMatch(html, /<img/);
+});
