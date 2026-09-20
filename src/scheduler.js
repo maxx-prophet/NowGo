@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import { fetchTicketmaster } from "./fetchers/ticketmaster.js";
 import { fetchSeatGeek } from "./fetchers/seatgeek.js";
-import { fetchJazzNYC } from "./fetchers/jazz-nyc.js";
+import { fetchJazzNYC, getLastFetchStats } from "./fetchers/jazz-nyc.js";
 import { ingestEvents } from "../db/ingest.js";
 import { geocodeVenues, backfillVenueWebsites } from "./services/geocode.js";
 import { backfillNeighborhoods } from "./services/neighborhoods.js";
@@ -12,6 +12,8 @@ import { runSurpriseScore } from "./services/surprise-score.js";
 import { runVenueEmbeddings } from "./services/venue-embeddings.js";
 import { runHookGeneration } from "./services/hook-generation.js";
 import { markSourceFetched } from "./services/sources.js";
+import { checkScraperHealth } from "./services/scraper-health.js";
+import { captureServerEvent } from "./services/posthog.js";
 import { createStageTimer } from "./services/pipeline-timing.js";
 import pool from "../db/index.js";
 
@@ -62,6 +64,18 @@ export async function runPipeline() {
     const { ok, skipped } = await timer.stage("ingest", () => ingestEvents(allEvents));
     console.log(`  💾 Ingested ${ok} events, skipped ${skipped}`);
 
+    // Did the scraper bring in the venues it usually does? Runs after ingest
+    // so tonight's rows are in the comparison. Reports to PostHog every run;
+    // the alert there fires on a bad value or on silence. Own try/catch: a
+    // health check must never take the pipeline down with it.
+    try {
+      await timer.stage("scraper-health", () =>
+        checkScraperHealth({ fetchStats: { jazz_nyc: getLastFetchStats() ?? {} } })
+      );
+    } catch (err) {
+      console.error(`  ❌ Scraper health check failed (continuing): ${err.message}`);
+    }
+
     // Must run after ingest so new venue rows exist. Isolated in its own
     // try/catch: geocoding and website backfill both depend on an external
     // API and quota, and a failure in either must not skip the enrichment
@@ -105,6 +119,8 @@ export async function runPipeline() {
     console.log(`  🏁 Pipeline complete [${new Date().toISOString()}]`);
   } catch (err) {
     console.error(`  ❌ Pipeline failed: ${err.message}`);
+    // A run that died before the health check emits nothing else, so say so.
+    await captureServerEvent("pipeline_failed", { error: err.message, stage: timer.stages().at(-1)?.label ?? null });
   } finally {
     // Printed on failure too: a run that died mid-way still tells you which
     // stage it got stuck in.

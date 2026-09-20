@@ -198,6 +198,13 @@ export function parseSchedule(html, targetDates) {
   return { events, rowCount: rows.length, skippedNoTime, keptNoArea };
 }
 
+// What the last fetch saw, for the scraper health check. Null until a fetch
+// has completed in this process.
+let lastFetchStats = null;
+export function getLastFetchStats() {
+  return lastFetchStats;
+}
+
 export async function fetchJazzNYC() {
   const now = new Date();
   const targetDates = new Set([
@@ -217,7 +224,8 @@ export async function fetchJazzNYC() {
 
   const html = await res.text();
 
-  const { events, skippedNoTime, keptNoArea } = parseSchedule(html, targetDates);
+  const { events, rowCount, skippedNoTime, keptNoArea } = parseSchedule(html, targetDates);
+  lastFetchStats = { events: events.length, rows: rowCount, skippedNoTime, keptNoArea };
   if (skippedNoTime) {
     console.log(`   ⚠️  Skipped ${skippedNoTime} rows with no parseable set time`);
   }

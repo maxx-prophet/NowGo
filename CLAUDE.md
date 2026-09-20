@@ -230,6 +230,13 @@ These are real as of 2026-08-07. Verify before relying on any of them.
   only rows with an explicit non-NYC code (`OUTSIDE_NYC`) and logs
   `Kept N rows with no area code`.
 
+  **The scraper health check is per-venue, not "zero results"** — the outage
+  above returned 56 events. `src/services/scraper-health.js` flags a venue
+  with jazz-nyc events on ≥5 of the last 7 days, including this weekday, that
+  has nothing upcoming. The weekday clause matters: Bar Bayeux is closed
+  Sun/Mon and was a false positive without it. Replayed as of 2026-09-19 it
+  names exactly the four rooms that were lost.
+
   Do **not** merge venues on shared address alone: Lincoln Center, New World
   Stages, the Williams Center and Birdland all run genuinely separate rooms at
   one address. Require matching address *and* website.
@@ -268,7 +275,12 @@ API `id`.** Extracting the ID from the URL and querying the API can produce fals
   `ANTHROPIC_API_KEY`, `PIPELINE_TOKEN`, and the `ASC_*` App Store Connect
   values.
   Load with `set -a; . ./.env.nowgo; set +a`.
-- **`mobile/.env`** (gitignored) holds `POSTHOG_KEY`.
+- **`mobile/.env`** (gitignored) holds `POSTHOG_KEY`. The backend needs the
+  same key in `.env.nowgo` **and on Railway** (`railway variables --set
+  POSTHOG_KEY=...`): the pipeline sends `scraper_health` every run and
+  `pipeline_failed` on a crash via `src/services/posthog.js`. Without the key
+  it logs one warning and sends nothing — the PostHog alert then fires on
+  silence, which is the intended failure mode.
 - Never put tokens in tracked files. GitHub push protection has blocked this repo
   before over a token in a `.rtf`.
 - `psql` with a password containing `!` needs single quotes around the URL.
