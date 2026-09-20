@@ -73,9 +73,10 @@ async function upsertVenue(client, event) {
     ? neighborhoodFor(Number(event.lat), Number(event.lng))
     : null;
 
-  // A website the source itself links to (jazz-nyc's venue cell href) beats
-  // the one Google Place Details guessed from the name, so it wins the
-  // COALESCE. Sources that send none leave whatever is there.
+  // The website only fills a blank. jazz-nyc's venue cell href is usually the
+  // venue's site, but not always — Smoke's row links to a performer's page —
+  // and a Google Place Details result already on the row is the better
+  // guess. New venues get the href, so the relabel signal still works.
   const { rows } = await client.query(
     `INSERT INTO venues (name, address, neighborhood, geo_lat, geo_lng, website)
      VALUES ($1, $2, $3, $4, $5, $6)
@@ -84,7 +85,7 @@ async function upsertVenue(client, event) {
            neighborhood = COALESCE(EXCLUDED.neighborhood, venues.neighborhood),
            geo_lat      = COALESCE(EXCLUDED.geo_lat, venues.geo_lat),
            geo_lng      = COALESCE(EXCLUDED.geo_lng, venues.geo_lng),
-           website      = COALESCE(EXCLUDED.website, venues.website),
+           website      = COALESCE(venues.website, EXCLUDED.website),
            updated_at   = now()
      RETURNING venue_id`,
     [

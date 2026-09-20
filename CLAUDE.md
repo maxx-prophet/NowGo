@@ -215,7 +215,8 @@ These are real as of 2026-08-07. Verify before relying on any of them.
   `venue_aliases`.
 
   The fetcher now emits the href as `venueUrl`, ingest writes it to
-  `venues.website` (it wins over the Google-guessed one), and the worklist
+  `venues.website` only when that is empty — jazz-nyc's Smoke row links to a
+  performer's site, so an existing Google-resolved site is kept, and the worklist
   flags an uncurated venue that shares a site with a known one — a `🔁` line
   in the pipeline log and a "same site as" note on `/venues/uncurated`. That
   is the relabel signal. **It is not a merge**: Birdland Theater shares
