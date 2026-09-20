@@ -2,8 +2,6 @@ import fetch from "node-fetch";
 import fs from "fs";
 import { fileURLToPath } from "url";
 
-const NYC_AREAS = new Set(["MT", "BK", "BX", "QU", "SI"]);
-
 const AREA_NAMES = {
   MT: "Manhattan",
   BK: "Brooklyn",
@@ -85,7 +83,7 @@ function makeId(date, time, venue, performer) {
 // "2026-08-05T19:00:00-04:00Z" — an invalid date carrying both an offset and Z.
 // Ingest then skipped the row with "Invalid time value", which is why only
 // events whose time FAILED to parse survived, defaulting to midnight.
-export function normalizeRow(date, time, area, venue, performer) {
+export function normalizeRow(date, time, area, venue, performer, venueUrl = null) {
   return {
     id: makeId(date, time, venue, performer),
     source: "jazz_nyc",
@@ -97,8 +95,13 @@ export function normalizeRow(date, time, area, venue, performer) {
     doorsOpen: null,
 
     venue,
+    // The venue cell's href. jazz-nyc.com writes one room under several
+    // labels and drifts between them ("Django(The)" / "The Django"); the href
+    // is what stays put. Not a venue key — smallslive.com covers three rooms —
+    // but it is the signal that a new label is an old venue.
+    venueUrl,
     address: null,
-    neighborhood: AREA_NAMES[area] ?? area ?? null,
+    neighborhood: AREA_NAMES[area] ?? (area || null),
     lat: null,
     lng: null,
 
@@ -126,6 +129,75 @@ export function normalizeRow(date, time, area, venue, performer) {
 // evening (observed rolling over around 8:30pm ET), so a late run finds nothing
 // for "today". The daytime runs are what capture tonight's late sets; the
 // evening run prefetches tomorrow instead of coming back empty.
+// Codes the table uses for places outside the city. An empty area cell is not
+// one of them: on 2026-09-20 every Smalls, Mezzrow and Jazzcultural row had
+// an empty area, and requiring a known NYC code had silently dropped the
+// flagship walk-in rooms since 09-17. Keep the row; the neighborhood is
+// derived from coordinates after geocoding anyway.
+const OUTSIDE_NYC = new Set(["WT", "CT", "NJ", "LI", "RK", "PA", "UP"]);
+
+function cellText(s) {
+  return s
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&#039;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .trim();
+}
+
+function cellHref(s) {
+  const m = s.match(/<a\s[^>]*href="([^"]+)"/i);
+  return m ? m[1] : null;
+}
+
+// Pure so the real cell markup can be tested. `targetDates` holds the table's
+// own MM/DD/YY strings.
+export function parseSchedule(html, targetDates) {
+  const tbodyStart = html.indexOf("<tbody>");
+  const tbodyEnd = html.indexOf("</tbody>", tbodyStart);
+  if (tbodyStart === -1) throw new Error("Could not find table body in jazz-nyc.com response");
+
+  const tbody = html.slice(tbodyStart + 7, tbodyEnd);
+  const rows = tbody.split("<tr>").slice(1);
+
+  const events = [];
+  let skippedNoTime = 0;
+  let keptNoArea = 0;
+
+  for (const row of rows) {
+    const cellMatches = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)];
+    if (cellMatches.length < 5) continue;
+
+    const date = cellText(cellMatches[0][1]);
+    const timeStr = cellText(cellMatches[1][1]);
+    const area = cellText(cellMatches[2][1]);
+    const venue = cellText(cellMatches[3][1]);
+    const venueUrl = cellHref(cellMatches[3][1]);
+    const performer = cellText(cellMatches[4][1]);
+
+    if (!targetDates.has(date)) continue;
+    if (OUTSIDE_NYC.has(area)) continue;
+    if (!venue || !performer) continue;
+    if (!area) keptNoArea += 1;
+
+    // One row can list several sets ("8:00 PM & 10:30 PM"); each is a separate
+    // thing a user can go to, so each becomes its own event.
+    const setTimes = parseSetTimes(timeStr);
+    if (!setTimes.length) {
+      skippedNoTime += 1;
+      continue;
+    }
+    for (const time of setTimes) {
+      events.push(normalizeRow(parseDate(date), time, area, venue, performer, venueUrl));
+    }
+  }
+
+  return { events, rowCount: rows.length, skippedNoTime, keptNoArea };
+}
+
 export async function fetchJazzNYC() {
   const now = new Date();
   const targetDates = new Set([
@@ -145,55 +217,12 @@ export async function fetchJazzNYC() {
 
   const html = await res.text();
 
-  const tbodyStart = html.indexOf("<tbody>");
-  const tbodyEnd = html.indexOf("</tbody>", tbodyStart);
-  if (tbodyStart === -1) throw new Error("Could not find table body in jazz-nyc.com response");
-
-  const tbody = html.slice(tbodyStart + 7, tbodyEnd);
-  const rows = tbody.split("<tr>").slice(1);
-  console.log(`   Found ${rows.length} table rows`);
-
-  const cellText = (s) => s
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&#039;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .trim();
-
-  const events = [];
-  let skippedNoTime = 0;
-
-  for (const row of rows) {
-    const cellMatches = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)];
-    if (cellMatches.length < 5) continue;
-
-    const date = cellText(cellMatches[0][1]);
-    const timeStr = cellText(cellMatches[1][1]);
-    const area = cellText(cellMatches[2][1]);
-    const venue = cellText(cellMatches[3][1]);
-    const performer = cellText(cellMatches[4][1]);
-
-    if (!targetDates.has(date)) continue;
-    if (!NYC_AREAS.has(area)) continue;
-    if (!venue || !performer) continue;
-
-    // One row can list several sets ("8:00 PM & 10:30 PM"); each is a separate
-    // thing a user can go to, so each becomes its own event.
-    const setTimes = parseSetTimes(timeStr);
-    if (!setTimes.length) {
-      skippedNoTime += 1;
-      continue;
-    }
-    for (const time of setTimes) {
-      events.push(normalizeRow(parseDate(date), time, area, venue, performer));
-    }
-  }
-
+  const { events, skippedNoTime, keptNoArea } = parseSchedule(html, targetDates);
   if (skippedNoTime) {
     console.log(`   ⚠️  Skipped ${skippedNoTime} rows with no parseable set time`);
+  }
+  if (keptNoArea) {
+    console.log(`   ℹ️  Kept ${keptNoArea} rows with no area code`);
   }
   console.log(`   ✅ Got ${events.length} NYC jazz events tonight`);
   return events;

@@ -118,3 +118,75 @@ test("every set time produced by parseSetTimes survives ingest parsing", () => {
     assert.ok(!Number.isNaN(parsed.getTime()), `ingest would reject ${row.time}`);
   }
 });
+
+// ─── TABLE PARSING ───────────────────────────────────────────────────────────
+// Markup copied from the live page on 2026-09-20. The venue cell is a link
+// whose href is the stable identity; the label drifts. The area cell is often
+// empty now — it was empty for every Smalls, Mezzrow and Jazzcultural row that
+// day, and dropping those rows silently removed the flagship walk-in rooms.
+
+import { parseSchedule } from "./jazz-nyc.js";
+
+const row = ({ date = "09/20/26", time = "7:00 PM", area = "MT", venue, performer = "Some Trio" }) => `<tr>
+                    <td>${date}</td>
+                    <td>${time}</td>
+                    <td class="col-area">${area}</td>
+
+                   <td>
+            ${venue}
+    </td>
+
+<td>
+            ${performer}    </td>
+
+                            `;
+
+const linked = (label, href) => `<a href="${href}" target="_blank">\n            ${label}        </a>`;
+const page = (...rows) => `<html><table><tbody>${rows.join("")}</tbody></table></html>`;
+const DATES = new Set(["09/20/26"]);
+
+test("parseSchedule emits the venue href alongside the label", () => {
+  const html = page(row({ venue: linked("Django(The)", "https://thedjangonyc.com/") }));
+  const { events } = parseSchedule(html, DATES);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].venue, "Django(The)");
+  assert.equal(events[0].venueUrl, "https://thedjangonyc.com/");
+});
+
+test("parseSchedule decodes entities in the label, and the href is untouched", () => {
+  const html = page(row({ venue: linked("Arthur&#039;s Tavern", "https://arthurstavern.nyc/") }));
+  const [e] = parseSchedule(html, DATES).events;
+  assert.equal(e.venue, "Arthur's Tavern");
+  assert.equal(e.venueUrl, "https://arthurstavern.nyc/");
+});
+
+test("a venue cell with no link yields a null venueUrl, not a dropped row", () => {
+  const html = page(row({ venue: "One Flight Up" }));
+  const [e] = parseSchedule(html, DATES).events;
+  assert.equal(e.venue, "One Flight Up");
+  assert.equal(e.venueUrl, null);
+});
+
+test("an empty area cell keeps the row — Smalls was being dropped this way", () => {
+  const html = page(row({ area: "", venue: linked("Smalls", "https://www.smallslive.com/") }));
+  const { events } = parseSchedule(html, DATES);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].neighborhood, null);
+});
+
+test("a row explicitly outside NYC is still dropped", () => {
+  const html = page(row({ area: "NJ", venue: linked("Shanghai Jazz", "https://shanghaijazz.com/") }));
+  assert.equal(parseSchedule(html, DATES).events.length, 0);
+});
+
+test("a row on another date is dropped", () => {
+  const html = page(row({ date: "09/21/26", venue: linked("Smalls", "https://www.smallslive.com/") }));
+  assert.equal(parseSchedule(html, DATES).events.length, 0);
+});
+
+test("the time contract survives: bare HH:MM:SS, one event per set", () => {
+  const html = page(row({ time: "7:30 PM & 9:30 PM", venue: linked("Smalls", "https://www.smallslive.com/") }));
+  const { events } = parseSchedule(html, DATES);
+  assert.deepEqual(events.map(e => e.time), ["19:30:00", "21:30:00"]);
+  assert.equal(events[0].date, "2026-09-20");
+});
