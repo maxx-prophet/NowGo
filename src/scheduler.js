@@ -11,6 +11,7 @@ import { runGenreEnrichment } from "./services/genre-enrichment.js";
 import { runSurpriseScore } from "./services/surprise-score.js";
 import { runVenueEmbeddings } from "./services/venue-embeddings.js";
 import { runHookGeneration } from "./services/hook-generation.js";
+import { markSourceFetched } from "./services/sources.js";
 import { createStageTimer } from "./services/pipeline-timing.js";
 import pool from "../db/index.js";
 
@@ -42,15 +43,18 @@ export async function runPipeline() {
   try {
     const tmEvents = await timer.stage("fetch:ticketmaster", fetchTicketmaster);
     console.log(`  ✅ Ticketmaster: ${tmEvents.length} events`);
+    await markSourceFetched("ticketmaster");
 
     const aliasMap = await loadAliasMap();
     console.log(`  🗺  Loaded ${aliasMap.size} venue aliases`);
 
     const mergedEvents = await timer.stage("fetch:seatgeek+merge", () => fetchSeatGeek(tmEvents, aliasMap, pool));
     console.log(`  ✅ SeatGeek merged: ${mergedEvents.length} total events`);
+    await markSourceFetched("seatgeek");
 
     const jazzEvents = await timer.stage("fetch:jazz-nyc", fetchJazzNYC);
     console.log(`  ✅ Jazz NYC: ${jazzEvents.length} events`);
+    await markSourceFetched("jazz_nyc");
 
     const allEvents = [...mergedEvents, ...jazzEvents];
     console.log(`  💾 Ingesting ${allEvents.length} events...`);

@@ -122,8 +122,10 @@ clamps invalid hours unpredictably.
 
 These are real as of 2026-08-07. Verify before relying on any of them.
 
-- **`sources.last_fetched_at` is never written.** Always null. It cannot be used
-  to tell whether a fetcher succeeded.
+- **`sources.last_fetched_at`** is stamped by the pipeline after each fetch
+  stage returns (`src/services/sources.js`), so `GET /sources` shows when a
+  fetcher last succeeded. A fetch that throws leaves the old stamp — a stale
+  one is the signal. Before 2026-09-20 it was never written.
 - **`walk_in` is a curated property of the venue, not the event.**
   `venues.walk_in_policy` (`always` / `space_permitting` / `standby` / `none` /
   `unknown`, default `unknown`) is set by hand per venue in
@@ -212,8 +214,20 @@ These are real as of 2026-08-07. Verify before relying on any of them.
   reached the filter. Merged in `011_merge_duplicate_jazz_venues.sql` via
   `venue_aliases`.
 
-  **The fetcher currently discards that `href`** (`src/fetchers/jazz-nyc.js`
-  reads only the cell text), so nothing detects the next drift automatically.
+  The fetcher now emits the href as `venueUrl`, ingest writes it to
+  `venues.website` (it wins over the Google-guessed one), and the worklist
+  flags an uncurated venue that shares a site with a known one — a `🔁` line
+  in the pipeline log and a "same site as" note on `/venues/uncurated`. That
+  is the relabel signal. **It is not a merge**: Birdland Theater shares
+  birdlandjazz.com with the main room and is a different room. A human
+  decides, and the merge is a `venue_aliases` row.
+
+  **jazz-nyc.com also leaves the area cell empty for some venues** — on
+  2026-09-20 every Smalls, Mezzrow, Jazzcultural and Arthur's Tavern row.
+  The fetcher used to require a known NYC code and silently dropped them,
+  which is why those rooms had no events from 09-17 to 09-20. It now drops
+  only rows with an explicit non-NYC code (`OUTSIDE_NYC`) and logs
+  `Kept N rows with no area code`.
 
   Do **not** merge venues on shared address alone: Lincoln Center, New World
   Stages, the Williams Center and Birdland all run genuinely separate rooms at
