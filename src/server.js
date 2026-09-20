@@ -11,6 +11,7 @@ import { NOT_ATTRACTION_SQL } from "./services/venue-type.js";
 import { checkPipelineToken } from "./services/pipeline-auth.js";
 import { withAttribution, withAttributionAll } from "./services/attribution.js";
 import { dedupeListings } from "./services/dedupe.js";
+import { collapseTimedEntry } from "./services/timed-entry.js";
 import { renderUncuratedVenuesPage } from "./views/uncurated-venues.js";
 dotenv.config({ path: ".env.nowgo" });
 
@@ -207,7 +208,10 @@ app.get("/events/tonight", async (req, res) => {
     // Then fold duplicate listings of the same set into one card. Credit is
     // attached first so a jazz-nyc row folded into its Ticketmaster twin still
     // hands its credit over — see services/dedupe.js for why that matters.
-    const rows = dedupeListings(withAttributionAll(raw));
+    //
+    // Then fold a museum's timed-entry slots into one card with `showtimes`,
+    // so two museums are not a quarter of the feed — see services/timed-entry.js.
+    const rows = collapseTimedEntry(dedupeListings(withAttributionAll(raw)));
 
     // Enrich with travel time when user location is known
     let filterable = hasGeo

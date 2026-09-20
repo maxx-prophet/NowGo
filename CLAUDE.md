@@ -164,6 +164,15 @@ These are real as of 2026-08-07. Verify before relying on any of them.
   `unknown`** — the call covered the main room only. Migration
   `015_venue_walk_in_birdland.sql`.
 
+- **Museum timed-entry slots are one row each in `events`**, and stay that
+  way — Ticketmaster issues an event ID per 15-minute admission slot, so
+  Balloon Museum and Banksy Museum are ~20 rows a day. The API folds a run of
+  ≥3 same-venue/name/URL starts spaced ≤60 min apart into one card with
+  `showtimes` (`src/services/timed-entry.js`). Do not key that on venue+name
+  alone: a jazz room's two sets are separate events on purpose, and the
+  closest real multi-set night is 105 min apart. Counting rows in SQL will
+  still show the duplication; that is expected.
+
 - **`price_min` is null on most events**, so the budget filter has little to work
   with.
 
