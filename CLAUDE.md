@@ -255,6 +255,15 @@ These are real as of 2026-08-07. Verify before relying on any of them.
   observed around 8:30pm ET. A late request for "today" matches nothing, which is
   why the fetcher asks for today *and* tomorrow.
 
+- **The table carries months, not days.** On 2026-09-22 it held 559 rows over
+  66 days (09/23–12/28) across 59 venues; the fetcher keeps today and tomorrow
+  and discards the rest. Two consequences. A venue with no rows *today* is
+  usually just dark tonight, not gone — only zero rows across the whole table
+  means delisted (`parseSchedule` already parses them all, so check there
+  before concluding anything). And the forward inventory a "This Weekend" view
+  would need is already on the page: widening `targetDates` is the cheap part,
+  the tonight-window SQL and ranking are not.
+
 ## Verifying third-party links
 
 **Ticketmaster returns 401 to curl** — that is their bot wall, not a dead link.
