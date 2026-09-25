@@ -316,12 +316,15 @@ Verify what a build will actually see with:
   `app.config.js` is ignored. `autoIncrement` is on for the production profile.
 - **A finished build reaches only the internal group.** `eas build` → `eas
   submit` puts the build in TestFlight and on "Team (Expo)" (Donnie). The public
-  link hands out whatever is newest on **"Friends and Family"**, and a build only
-  gets there when it is assigned to that group — which triggers Beta App Review.
-  This was missed on build 4 (Aug 21) and again on build 9 (Sep 8): testers on
-  the link were reporting bugs against a build two releases old. After every
-  build: assign it to Friends and Family, then confirm with
-  `GET /v1/betaGroups/{id}/builds` (or the TestFlight tab in App Store Connect).
+  link hands out whatever is newest on **"Friends and Family"** *that has passed
+  Beta App Review*. This was missed on build 4 (Aug 21) and again on build 9
+  (Sep 8): testers on the link were reporting bugs against a build two releases
+  old. **Assigning the build to the group is not enough** — build 11 sat in
+  the group for three days at `externalBuildState: READY_FOR_BETA_SUBMISSION`,
+  never submitted. After every build: assign it to Friends and Family, then
+  check `GET /v1/builds/{id}/buildBetaDetail`; if it is still
+  `READY_FOR_BETA_SUBMISSION`, `POST /v1/betaAppReviewSubmissions` for it. Done
+  means `IN_BETA_TESTING`.
 - **Add to Calendar needs no calendar permission.** It goes through
   `expo-calendar`'s `createEventInCalendarAsync`, the system event editor, so
   there is no `requestCalendarPermissionsAsync`, no privacy-manifest change
