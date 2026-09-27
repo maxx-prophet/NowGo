@@ -76,3 +76,25 @@ test("the request window is UTC, which is what Ticketmaster expects", async () =
   assert.match(u.searchParams.get("startDateTime"), /Z$/);
   assert.match(u.searchParams.get("endDateTime"), /Z$/);
 });
+
+test("a $0 price range is unknown, not free", async () => {
+  // Ticketmaster reports min 0 / max 0 for shows sold through TicketWeb that
+  // publish no price: Birdland, Blue Note and Iridium all came back this way,
+  // and the app told people a $40 set was FREE.
+  const zero = { ...evt("z"), url: "https://www.ticketweb.com/event/x/1",
+    priceRanges: [{ type: "standard", currency: "USD", min: 0, max: 0 }] };
+  const { fetchImpl } = stubFetch([{ _embedded: { events: [zero] }, page: { totalPages: 1 } }]);
+  const [e] = await fetchTicketmaster({ fetchImpl });
+  assert.equal(e.isFree, false);
+  assert.equal(e.priceMin, null);
+  assert.equal(e.priceMax, null);
+});
+
+test("a real price range is kept", async () => {
+  const paid = { ...evt("p"), priceRanges: [{ type: "standard", currency: "USD", min: 38.1, max: 54.99 }] };
+  const { fetchImpl } = stubFetch([{ _embedded: { events: [paid] }, page: { totalPages: 1 } }]);
+  const [e] = await fetchTicketmaster({ fetchImpl });
+  assert.equal(e.isFree, false);
+  assert.equal(e.priceMin, 38.1);
+  assert.equal(e.priceMax, 54.99);
+});

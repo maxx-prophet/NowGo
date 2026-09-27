@@ -15,7 +15,12 @@ const RADIUS_MILES = 10;
 function normalizeTicketmasterEvent(e) {
   const venue = e._embedded?.venues?.[0];
   const classification = e.classifications?.[0];
-  const price = e.priceRanges?.[0];
+  // A 0–0 range is Ticketmaster's placeholder for "no published price" — seen
+  // on TicketWeb-sold club shows at Birdland, Blue Note and Iridium, all paid
+  // rooms. Treat it as unknown. A price we show is a promise, so a genuinely
+  // free show losing its FREE label is the cheaper mistake.
+  const range = e.priceRanges?.[0];
+  const price = range && (range.min > 0 || range.max > 0) ? range : null;
 
   const rawSegment = classification?.segment?.name;
   const rawGenre = classification?.genre?.name;
@@ -43,8 +48,7 @@ function normalizeTicketmasterEvent(e) {
     priceMin: price?.min ?? null,
     priceMax: price?.max ?? null,
     currency: price?.currency ?? "USD",
-    isFree: price != null && price.min === 0 && (price.max == null || price.max === 0)
-           && (!e.url || e.url.includes("ticketmaster.com") || e.url.includes("ticketweb.com")),
+    isFree: false,
 
     status: e.dates?.status?.code ?? null,
     availabilityTier: mapAvailability(e.dates?.status?.code),
