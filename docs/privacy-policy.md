@@ -5,7 +5,7 @@ permalink: /privacy-policy/
 
 # NowGo Privacy Policy
 
-**Last updated: July 18, 2026**
+**Last updated: October 1, 2026**
 
 NowGo ("we," "our," or "the app") helps you discover events happening tonight in New York City. This policy explains what information the app collects, how it's used, and the choices you have.
 
@@ -26,15 +26,19 @@ We use PostHog, a third-party analytics provider, to understand how people use t
 
 This data is used only to improve the app and is not sold to third parties or used for advertising.
 
+### Our Website
+nowgoapp.com also uses PostHog to count visits, where visitors came from (for example, a link shared on Reddit), and clicks on the TestFlight link. It sets no cookies and stores nothing in your browser, so a visit is not connected to any earlier or later one. If you join the email list, your address goes to our email provider, Loops, and is never sent to PostHog.
+
 ### Locally Stored Preferences
 Your onboarding choices (interests, budget, identity) are saved on your device so the app remembers your preferences between sessions. This local storage is not accessible to other apps.
 
 ### What We Don't Collect
-NowGo does not require an account, and we do not collect your name, email address, phone number, or payment information. Ticket purchases happen entirely on the event organizer's or ticketing partner's website — we never see your payment details.
+NowGo does not require an account, and we do not collect your name, email address, phone number, or payment information. If you email us feedback from the app, we see your email address the way we would any email you send us. Ticket purchases happen entirely on the event organizer's or ticketing partner's website — we never see your payment details.
 
 ## Third-Party Services
 
 - **PostHog** (analytics) — see [PostHog's privacy policy](https://posthog.com/privacy)
+- **Loops** (the nowgoapp.com email list, only if you sign up) — see [Loops' privacy policy](https://loops.so/privacy)
 - **Apple Maps** — tapping "Directions" opens Apple Maps with the venue address; this is handled by Apple, not NowGo
 - **Ticketing & event partners** — tapping "Get Tickets" takes you to an external site with its own privacy practices
 

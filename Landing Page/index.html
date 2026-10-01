@@ -490,6 +490,22 @@
     ::-webkit-scrollbar-track { background: var(--black); }
     ::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 2px; }
   </style>
+  <!-- PostHog, same project as the app. persistence:'memory' means no cookies
+       and no localStorage: each visit counts on its own, so there is nothing
+       to consent to and nothing that follows anyone around. UTM tags on a
+       link (?utm_source=reddit) are recorded with the pageview. -->
+  <script>
+    !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+    posthog.init('phc_nMkGNJMrEGm7VsJnqfQ7WPqZkCJfK7Z9KKx2rWUjxtEe', {
+      api_host: 'https://us.i.posthog.com',
+      persistence: 'memory',
+      person_profiles: 'identified_only',
+      autocapture: false,
+      disable_session_recording: true,
+    });
+    // App and site share a project; this keeps the site's events separable.
+    posthog.register({ site: 'landing' });
+  </script>
 </head>
 <body>
 
@@ -518,7 +534,7 @@
       <!-- BETA CTA -->
       <div class="form-wrap">
         <div class="form-label">The beta is open</div>
-        <a class="cta-primary" href="https://testflight.apple.com/join/kMKDNEkK" target="_blank" rel="noopener">Join the iOS beta on TestFlight →</a>
+        <a class="cta-primary" data-placement="hero" href="https://testflight.apple.com/join/kMKDNEkK" target="_blank" rel="noopener">Join the iOS beta on TestFlight →</a>
         <p class="cta-meta">Free during beta · iPhone only · NYC only</p>
 
         <!-- EMAIL FALLBACK -->
@@ -529,7 +545,7 @@
             <button class="form-btn" onclick="handleSubmit()">Send me the link →</button>
           </div>
           <p class="form-note">No spam. Unsubscribe anytime.</p>
-          <p class="form-success" id="formSuccess">✓ Got it. We'll email you the link — or if you're on your iPhone, <a href="https://testflight.apple.com/join/kMKDNEkK" target="_blank" rel="noopener" style="color:inherit;">open it now →</a></p>
+          <p class="form-success" id="formSuccess">✓ Got it. We'll email you the link — or if you're on your iPhone, <a data-placement="form_success" href="https://testflight.apple.com/join/kMKDNEkK" target="_blank" rel="noopener" style="color:inherit;">open it now →</a></p>
         </div>
       </div>
     </section>
@@ -641,8 +657,8 @@
     <footer>
       <span class="footer-logo">NowGo</span>
       <div class="footer-links">
-        <a href="https://testflight.apple.com/join/kMKDNEkK" target="_blank" rel="noopener">TestFlight</a>
-        <a href="https://nowgoapp.com/privacy-policy/">Privacy</a>
+        <a data-placement="footer" href="https://testflight.apple.com/join/kMKDNEkK" target="_blank" rel="noopener">TestFlight</a>
+        <a href="https://maxx-prophet.github.io/NowGo/privacy-policy/">Privacy</a>
         <a href="mailto:hello@nowgoapp.com">hello@nowgoapp.com</a>
       </div>
       <span class="footer-copy">© 2026 NowGo · New York City</span>
@@ -671,6 +687,8 @@
     })
     .then(res => res.json())
     .then(data => {
+      // Never the address itself: the privacy policy promises analytics carry no email.
+      posthog.capture('waitlist_submitted', { ok: !!data.success });
       if (data.success) {
         input.style.display = 'none';
         document.querySelector('.form-btn').style.display = 'none';
@@ -685,6 +703,14 @@
 
   document.getElementById('emailInput').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') handleSubmit();
+  });
+
+  // Which TestFlight link people use. sendBeacon so the event survives iOS
+  // handing off to the TestFlight app mid-tap.
+  document.querySelectorAll('a[href*="testflight.apple.com"]').forEach(function(a) {
+    a.addEventListener('click', function() {
+      posthog.capture('testflight_clicked', { placement: a.dataset.placement || 'unknown' }, { transport: 'sendBeacon' });
+    });
   });
   </script>
 
