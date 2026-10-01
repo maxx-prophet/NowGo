@@ -100,6 +100,11 @@ export function useAnalytics() {
     alternativeTapped: (fromEventId: string, toEventId: string) =>
       posthog?.capture("alternative_tapped", { from_event_id: fromEventId, to_event_id: toEventId }),
 
+    // Taps on either feedback entry point. Counted separately from emails
+    // actually received: the gap is how many people start a report and give up.
+    feedbackOpened: (from: string, eventId: string | null) =>
+      posthog?.capture("feedback_opened", { from, event_id: eventId }),
+
     captureError: (error: Error, context?: Record<string, string | number | boolean | null>) =>
       posthog?.captureException(error, context),
   };

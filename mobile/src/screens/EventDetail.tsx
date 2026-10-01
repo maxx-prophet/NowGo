@@ -4,6 +4,7 @@ import type { AppNavProp, AppRouteProp, TravelMode, Event } from "../types";
 import { fetchTravel, fetchEvent } from "../api/nowgo";
 import { getAvailabilityBadge, formatTimeSpan } from "../components/eventCardHelpers";
 import { useAnalytics } from "../services/analytics";
+import { useFeedback } from "../hooks/useFeedback";
 import { walkInNotice } from "../services/walkIn";
 import { shareMessage } from "../services/share";
 import { calendarEntryFor } from "../services/calendar";
@@ -98,6 +99,7 @@ export default function EventDetail({ route, navigation }: Props) {
   const [travelLoading, setTravelLoading] = useState(false);
   const [alternatives, setAlternatives] = useState<Event[]>(event.alternatives ?? []);
   const analytics = useAnalytics();
+  const sendFeedback = useFeedback();
 
   const isSoldOut = event.availability_tier === "sold_out";
 
@@ -392,6 +394,19 @@ export default function EventDetail({ route, navigation }: Props) {
           </Text>
         </TouchableOpacity>
       ) : null}
+
+      {/* Report a problem. A wrong price, time or walk-in claim is the
+          feedback worth most, and the tester is looking at it right here —
+          the email arrives naming the event and its id. */}
+      <TouchableOpacity
+        style={[styles.creditRow, styles.reportRow, event.source_name && event.source_url ? { marginTop: 12 } : null]}
+        activeOpacity={0.7}
+        onPress={() => sendFeedback("event", event)}
+      >
+        <Text style={styles.creditText}>
+          Something wrong here? <Text style={styles.creditLink}>Tell us</Text>
+        </Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -503,6 +518,9 @@ const styles = StyleSheet.create({
   creditLink: {
     color: "#9CA3AF",
     textDecorationLine: "underline",
+  },
+  reportRow: {
+    marginBottom: 32,
   },
   soldOutNote: {
     borderWidth: 1,

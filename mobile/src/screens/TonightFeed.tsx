@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useLayoutEffect, useState, useCallback } from "react";
 import {
   View, Text, FlatList, TouchableOpacity,
   ActivityIndicator, StyleSheet, RefreshControl, Linking,
@@ -12,6 +12,7 @@ import { fetchTonightEvents } from "../api/nowgo";
 import type { Event, AppNavProp } from "../types";
 import { useAnalytics } from "../services/analytics";
 import { useLocation } from "../hooks/useLocation";
+import { useFeedback } from "../hooks/useFeedback";
 import { emptyReason } from "../services/coverage";
 import {
   ALL_CATEGORIES,
@@ -80,6 +81,24 @@ export default function TonightFeed({ navigation }: Props) {
   const [modePickerOpen, setModePickerOpen] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const analytics = useAnalytics();
+  const sendFeedback = useFeedback();
+
+  // Always visible in the header, not tucked in a menu: during the beta a
+  // tester who has something to say should never have to look for where.
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => sendFeedback("feed")}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Send feedback"
+        >
+          <Text style={styles.feedbackBtn}>Feedback</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, sendFeedback]);
 
   const [surpriseEvents, setSurpriseEvents] = useState<Event[]>([]);
   const [surpriseOpen, setSurpriseOpen] = useState(false);
@@ -503,6 +522,7 @@ export default function TonightFeed({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0A0A0A" },
+  feedbackBtn: { color: "#FF6B35", fontSize: 15, fontWeight: "600" },
   categoryRowWrap: { position: "relative" },
   fadeRight: {
     position: "absolute",
