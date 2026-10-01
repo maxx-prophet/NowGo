@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert";
-import { shareMessage } from "./share.ts";
+import { shareMessage, inviteMessage } from "./share.ts";
 
 const NOW = new Date("2026-08-29T22:00:00Z");
 const IN_AN_HOUR = "2026-08-29T23:00:00Z";
@@ -89,4 +89,19 @@ test("shareTimeFormatMatchesTheApp", () => {
     shareMessage(base, IN_AN_HOUR, NOW).includes(expected),
     `share time should read as ${expected}, the same as the event card`
   );
+});
+
+test("an invite links the landing page, not TestFlight directly", () => {
+  // The landing page says what the app is before Apple's install screen does,
+  // and it is the page whose visits can be counted.
+  const msg = inviteMessage();
+  assert.ok(msg.includes("https://nowgoapp.com"), msg);
+  assert.ok(!msg.includes("testflight"), msg);
+});
+
+test("an invite says what the app does, in one breath", () => {
+  const msg = inviteMessage();
+  assert.match(msg, /tonight/);
+  assert.match(msg, /iPhone/);
+  assert.ok(msg.length < 200, "short enough to read in a notification");
 });

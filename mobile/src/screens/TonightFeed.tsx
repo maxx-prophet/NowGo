@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useState, useCallback } from "react";
 import {
   View, Text, FlatList, TouchableOpacity,
-  ActivityIndicator, StyleSheet, RefreshControl, Linking,
+  ActivityIndicator, StyleSheet, RefreshControl, Linking, Share,
 } from "react-native";
+import { inviteMessage } from "../services/share";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCramped } from "../hooks/useCramped";
 import EventCard from "../components/EventCard";
@@ -395,7 +396,8 @@ export default function TonightFeed({ navigation }: Props) {
           </View>
         }
         ListFooterComponent={
-          soldOutEvents.length > 0 ? (
+          <>
+          {soldOutEvents.length > 0 ? (
             <View style={styles.soldOutSection}>
               <TouchableOpacity
                 style={styles.soldOutToggle}
@@ -435,7 +437,31 @@ export default function TonightFeed({ navigation }: Props) {
                   ))
                 : null}
             </View>
-          ) : null
+          ) : null}
+
+          {/* Invite a friend. At the end of the list, where someone has just
+              scrolled through the whole night — the moment the app has made
+              its case. Hidden on an empty feed, which makes no case at all. */}
+          {events.length > 0 ? (
+            <View style={styles.inviteCard}>
+              <Text style={styles.inviteTitle}>Know someone who goes out?</Text>
+              <TouchableOpacity
+                style={styles.inviteBtn}
+                activeOpacity={0.8}
+                onPress={async () => {
+                  analytics.inviteTapped();
+                  try {
+                    await Share.share({ message: inviteMessage() });
+                  } catch {
+                    // A dismissed share sheet needs no message.
+                  }
+                }}
+              >
+                <Text style={styles.inviteBtnText}>Invite a friend</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+          </>
         }
         ListHeaderComponent={
           events.length > 0 ? (
@@ -523,6 +549,13 @@ export default function TonightFeed({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0A0A0A" },
   feedbackBtn: { color: "#FF6B35", fontSize: 15, fontWeight: "600" },
+  inviteCard: {
+    marginHorizontal: 16, marginTop: 24, marginBottom: 40, padding: 20,
+    borderRadius: 16, backgroundColor: "#161616", alignItems: "center",
+  },
+  inviteTitle: { color: "#FFFFFF", fontSize: 16, fontWeight: "600", marginBottom: 14, textAlign: "center" },
+  inviteBtn: { backgroundColor: "#FF6B35", borderRadius: 12, paddingVertical: 12, paddingHorizontal: 28 },
+  inviteBtnText: { color: "#0A0A0A", fontSize: 15, fontWeight: "700" },
   categoryRowWrap: { position: "relative" },
   fadeRight: {
     position: "absolute",

@@ -105,6 +105,11 @@ export function useAnalytics() {
     feedbackOpened: (from: string, eventId: string | null) =>
       posthog?.capture("feedback_opened", { from, event_id: eventId }),
 
+    // Taps on "Invite a friend". Fires on tap, like event_shared — iOS does
+    // not reliably say whether the share went anywhere.
+    inviteTapped: () =>
+      posthog?.capture("invite_tapped"),
+
     captureError: (error: Error, context?: Record<string, string | number | boolean | null>) =>
       posthog?.captureException(error, context),
   };
