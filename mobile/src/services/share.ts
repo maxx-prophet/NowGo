@@ -29,6 +29,11 @@ function isStillUseful(leaveBy: string | null | undefined, now: Date): boolean {
   return new Date(leaveBy).getTime() - now.getTime() > 0;
 }
 
+// The person receiving a share is going out tonight too — the tester most worth
+// reaching. It goes last, on its own line, so the event link stays first and
+// keeps the message preview.
+const CREDIT = "\n\nFound with NowGo · nowgoapp.com";
+
 export function shareMessage(
   event: Pick<Event, "name" | "venue_name" | "url" | "availability_tier">,
   leaveBy?: string | null,
@@ -41,12 +46,12 @@ export function shareMessage(
   // to remove, and it is worse in a text message than in the app — the
   // recipient has none of the context that would explain why it is a dead end.
   if (event.availability_tier === "sold_out") {
-    return `${event.name} at ${venue} — sold out tonight, sadly.`;
+    return `${event.name} at ${venue} — sold out tonight, sadly.${CREDIT}`;
   }
 
   const opening = isStillUseful(leaveBy, now)
     ? `${event.name} at ${venue} — leave by ${formatTime(leaveBy!)} to make it.`
     : `${event.name} at ${venue}, tonight.`;
 
-  return event.url ? `${opening} ${event.url}` : opening;
+  return (event.url ? `${opening} ${event.url}` : opening) + CREDIT;
 }

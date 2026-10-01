@@ -28,7 +28,24 @@ test("a leave-by that has already passed is never shared as advice", () => {
 
 test("no leave-by at all still produces a usable message", () => {
   const msg = shareMessage(base, null, NOW);
-  assert.equal(msg, "Makoto Ozone Trio at Birdland Jazz Club, tonight. https://www.birdlandjazz.com/");
+  assert.equal(
+    msg,
+    "Makoto Ozone Trio at Birdland Jazz Club, tonight. https://www.birdlandjazz.com/\n\nFound with NowGo · nowgoapp.com"
+  );
+});
+
+test("every share says where it came from, on its own line after the plan", () => {
+  // The person on the other end is going out tonight too, which makes them the
+  // tester most worth reaching. The event link stays first so it gets the preview.
+  for (const msg of [
+    shareMessage(base, IN_AN_HOUR, NOW),
+    shareMessage({ ...base, url: null }, null, NOW),
+    shareMessage({ ...base, availability_tier: "sold_out" }, IN_AN_HOUR, NOW),
+  ]) {
+    assert.ok(msg.endsWith("\n\nFound with NowGo · nowgoapp.com"), msg);
+  }
+  const withLink = shareMessage(base, IN_AN_HOUR, NOW);
+  assert.ok(withLink.indexOf("birdlandjazz.com") < withLink.indexOf("nowgoapp.com"));
 });
 
 test("a sold-out show shares no link — a ticket page with no tickets is the dead end", () => {
@@ -48,6 +65,7 @@ test("a missing url leaves no trailing space or empty tail", () => {
   const msg = shareMessage({ ...base, url: null }, IN_AN_HOUR, NOW);
   assert.equal(msg, msg.trim());
   assert.ok(!msg.includes("http"));
+  assert.ok(!msg.includes(" \n"), "no space left before the credit line");
 });
 
 test("the event name is never truncated or reworded", () => {
