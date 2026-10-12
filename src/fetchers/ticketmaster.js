@@ -2,7 +2,7 @@ import fetch from "node-fetch";
 import fs from "fs";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
-import { tonightWindow } from "../services/tonight-window.js";
+import { fetchWindow } from "../services/tonight-window.js";
 dotenv.config({ path: ".env.nowgo" });
 
 const TM_API_KEY = process.env.TM_API_KEY;
@@ -77,7 +77,8 @@ const TM_MAX_EVENTS = 1000;
 
 // `fetchImpl` is injectable so the paging loop can be tested without network.
 export async function fetchTicketmaster({ fetchImpl = fetch } = {}) {
-  const { utcStart: start, utcEnd: end } = tonightWindow();
+  // Tonight and tomorrow evening, so the feed can offer both.
+  const { utcStart: start, utcEnd: end } = fetchWindow();
 
   console.log("\n📡 Fetching Ticketmaster...");
   console.log(`   Window: ${start} → ${end}`);

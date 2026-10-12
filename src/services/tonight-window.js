@@ -94,34 +94,6 @@ const pad = (n) => String(n).padStart(2, "0");
 const localStr = (y, m, d, h) => `${y}-${pad(m)}-${pad(d)}T${pad(h)}:00:00`;
 const utcStr = (date) => `${date.toISOString().split(".")[0]}Z`;
 
-export function tonightWindow(now = new Date()) {
-  const nyc = partsInZone(now, NYC);
-
-  // Before 4am ET we are still inside the previous evening's window, so anchor
-  // to yesterday rather than jumping 16 hours forward to tonight.
-  let { year, month, day } = nyc;
-  if (nyc.hour < WINDOW_END_HOUR) {
-    const prev = new Date(Date.UTC(year, month - 1, day));
-    prev.setUTCDate(prev.getUTCDate() - 1);
-    year = prev.getUTCFullYear();
-    month = prev.getUTCMonth() + 1;
-    day = prev.getUTCDate();
-  }
-
-  const endDate = new Date(Date.UTC(year, month - 1, day));
-  endDate.setUTCDate(endDate.getUTCDate() + 1);
-  const endY = endDate.getUTCFullYear();
-  const endM = endDate.getUTCMonth() + 1;
-  const endD = endDate.getUTCDate();
-
-  return {
-    localStart: localStr(year, month, day, WINDOW_START_HOUR),
-    localEnd: localStr(endY, endM, endD, WINDOW_END_HOUR),
-    utcStart: utcStr(nycLocalToUtc(year, month, day, WINDOW_START_HOUR)),
-    utcEnd: utcStr(nycLocalToUtc(endY, endM, endD, WINDOW_END_HOUR)),
-  };
-}
-
 // ─── TONIGHT AND TOMORROW ────────────────────────────────────────────────────
 //
 // An "evening" runs 5pm ET to 4am ET the next morning. The current evening is

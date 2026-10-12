@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseSetTimes, nycDateStr, normalizeRow } from "./jazz-nyc.js";
+import { parseSetTimes, nycDateStr, normalizeRow, jazzTargetDates } from "./jazz-nyc.js";
 
 // Formats below are taken verbatim from the live jazz-nyc.com schedule table.
 
@@ -189,4 +189,16 @@ test("the time contract survives: bare HH:MM:SS, one event per set", () => {
   const { events } = parseSchedule(html, DATES);
   assert.deepEqual(events.map(e => e.time), ["19:30:00", "21:30:00"]);
   assert.equal(events[0].date, "2026-09-20");
+});
+
+// ─── TARGET DATES ────────────────────────────────────────────────────────────
+
+test("jazzTargetDates is tonight's and tomorrow's evening, not today and tomorrow", () => {
+  // 6pm EDT Sep 1
+  assert.deepEqual([...jazzTargetDates(new Date("2026-09-01T22:00:00Z"))], ["09/01/26", "09/02/26"]);
+});
+
+test("jazzTargetDates after midnight still includes the evening in progress", () => {
+  // 1am EDT Sep 2 is still Sep 1's evening, so all three sources agree.
+  assert.deepEqual([...jazzTargetDates(new Date("2026-09-02T05:00:00Z"))], ["09/01/26", "09/02/26"]);
 });

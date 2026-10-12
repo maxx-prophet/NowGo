@@ -3,7 +3,7 @@ import fs from "fs";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { findVenuesByEmbedding } from "../services/venue-embeddings.js";
-import { tonightWindow } from "../services/tonight-window.js";
+import { fetchWindow } from "../services/tonight-window.js";
 dotenv.config({ path: ".env.nowgo" });
 
 const NYC_LAT = 40.758;
@@ -220,7 +220,7 @@ export async function fetchSeatGeek(tmEvents = [], aliasMap = new Map(), dbPool 
   }
 
   // SeatGeek's datetime_local filters are naive NYC wall-clock, not UTC.
-  const { localStart: start, localEnd: end } = tonightWindow();
+  const { localStart: start, localEnd: end } = fetchWindow();
 
   console.log("\n📡 Fetching SeatGeek...");
   console.log(`   Window: ${start} → ${end}`);

@@ -1,6 +1,7 @@
 import fetch from "node-fetch";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import { eveningDates } from "../services/tonight-window.js";
 
 const AREA_NAMES = {
   MT: "Manhattan",
@@ -60,6 +61,18 @@ export function nycDateStr(now = new Date()) {
   }).formatToParts(now);
   const get = (type) => parts.find((p) => p.type === type)?.value ?? "";
   return `${get("month")}/${get("day")}/${get("year")}`;
+}
+
+// The schedule dates to keep: the current evening and the next one, using the
+// same evening logic as the ticketing fetchers. Calendar "today and tomorrow"
+// disagrees with them after midnight, when today's date is already the next
+// evening and the one still in progress falls out.
+const tableDate = ({ year, month, day }) =>
+  `${String(month).padStart(2, "0")}/${String(day).padStart(2, "0")}/${String(year).slice(2)}`;
+
+export function jazzTargetDates(now = new Date()) {
+  const { tonight, tomorrow } = eveningDates(now);
+  return new Set([tableDate(tonight), tableDate(tomorrow)]);
 }
 
 function parseDate(dateStr) {
@@ -206,11 +219,7 @@ export function getLastFetchStats() {
 }
 
 export async function fetchJazzNYC() {
-  const now = new Date();
-  const targetDates = new Set([
-    nycDateStr(now),
-    nycDateStr(new Date(now.getTime() + 24 * 60 * 60 * 1000)),
-  ]);
+  const targetDates = jazzTargetDates();
   const todayStr = [...targetDates].join(", ");
 
   console.log("\n📡 Fetching Jazz NYC...");
