@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import dotenv from "dotenv";
 import pool from "../../db/index.js";
+import { nightBounds, nightWindowSql } from "./tonight-window.js";
 dotenv.config({ path: ".env.nowgo" });
 
 // Haiku calls are independent, so run several at once. 100 events in
@@ -12,7 +13,21 @@ function anthropic() {
   return (client ??= new Anthropic());
 }
 
-function buildPrompt(event) {
+// Tonight first, then tomorrow. Ordered so that if more than LIMIT events lack
+// a hook, the ones closest to being seen get theirs this run.
+export const HOOK_CANDIDATES_SQL = `
+  SELECT e.event_id, e.name, e.segment, e.genre, e.price_min, e.price_max, e.is_free,
+         v.name AS venue_name, v.neighborhood
+  FROM events e
+  LEFT JOIN venues v ON e.venue_id = v.venue_id
+  WHERE e.hook IS NULL
+    AND ${nightWindowSql("$1", "$2")}
+    AND e.availability_tier != 'cancelled'
+  ORDER BY e.start_time
+  LIMIT 100
+`;
+
+export function buildPrompt(event) {
   const price = event.is_free
     ? "Free"
     : event.price_min != null
@@ -32,7 +47,8 @@ Event:
 Rules:
 - Under 15 words
 - Specific and evocative, not generic ("packed house" beats "great atmosphere")
-- Present tense, tonight's context
+- Present tense
+- Do not say "tonight" or "tomorrow"; the same line is shown on both days
 - No em-dashes, no "come join us", no exclamation marks
 - Don't mention the event name
 
@@ -40,17 +56,11 @@ Respond with only the sentence, no quotes, no punctuation at the end.`;
 }
 
 export async function runHookGeneration() {
-  const { rows } = await pool.query(`
-    SELECT e.event_id, e.name, e.segment, e.genre, e.price_min, e.price_max, e.is_free,
-           v.name AS venue_name, v.neighborhood
-    FROM events e
-    LEFT JOIN venues v ON e.venue_id = v.venue_id
-    WHERE e.hook IS NULL
-      AND e.start_time > NOW() - interval '30 minutes'
-      AND e.start_time < (date_trunc('day', NOW() AT TIME ZONE 'America/New_York') + interval '1 day 4 hours') AT TIME ZONE 'America/New_York'
-      AND e.availability_tier != 'cancelled'
-    LIMIT 100
-  `);
+  const now = new Date();
+  const { rows } = await pool.query(HOOK_CANDIDATES_SQL, [
+    nightBounds("tonight", now).start,
+    nightBounds("tomorrow", now).end,
+  ]);
 
   if (rows.length === 0) {
     console.log("  ✅ Hook generation: no new events to process");

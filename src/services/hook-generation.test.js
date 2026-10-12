@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { generateHooks } from "./hook-generation.js";
+import { generateHooks, buildPrompt, HOOK_CANDIDATES_SQL } from "./hook-generation.js";
+import { nightWindowSql } from "./tonight-window.js";
 
 const events = n => Array.from({ length: n }, (_, i) => ({ event_id: `e${i}`, name: `Event ${i}` }));
 
@@ -82,4 +83,16 @@ test("an empty response is neither saved nor counted as generated", async () => 
   });
   assert.deepEqual(saved, ["e1"]);
   assert.deepEqual(result, { generated: 1, failed: 0 });
+});
+
+test("the prompt forbids day words, because one hook is shown on two days", () => {
+  // A hook generated for a tomorrow event is still on the card the next
+  // evening, when that event is tonight.
+  const prompt = buildPrompt({ name: "x", segment: "Music", genre: null, venue_name: "Smalls", neighborhood: null, is_free: false });
+  assert.match(prompt, /Do not say "tonight" or "tomorrow"/);
+});
+
+test("hook candidates cover tonight and tomorrow, soonest first", () => {
+  assert.ok(HOOK_CANDIDATES_SQL.includes(nightWindowSql("$1", "$2")));
+  assert.match(HOOK_CANDIDATES_SQL, /ORDER BY e\.start_time/);
 });
