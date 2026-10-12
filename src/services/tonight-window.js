@@ -19,14 +19,14 @@ export const TONIGHT_WINDOW_SQL = `
   AND e.start_time < (date_trunc('day', NOW() AT TIME ZONE 'America/New_York') + interval '1 day 4 hours') AT TIME ZONE 'America/New_York'
 `;
 
-// ─── THE SAME WINDOW, FOR THE FETCHERS ───────────────────────────────────────
+// ─── FETCH WINDOW FOR BOTH EVENINGS ──────────────────────────────────────────
 //
-// The SQL above is what the API will *serve*. This is what the fetchers must
-// go and *get*, and the two had drifted apart.
+// The fetchers must go and *get* the same window the API will serve, and they
+// had drifted apart.
 //
-// Both ticketing fetchers built their window with `new Date()` + `setHours(17)`,
-// which resolves against the host's local zone. Railway runs UTC, so in
-// production Ticketmaster was being asked for:
+// Both ticketing fetchers used to build the window with `new Date()` +
+// `setHours(17)`, which resolves against the host's local zone. Railway runs
+// UTC, so in production Ticketmaster was being asked for:
 //
 //   17:00Z → 02:00Z  =  1pm → 10pm ET
 //
@@ -40,7 +40,9 @@ export const TONIGHT_WINDOW_SQL = `
 //   - Ticketmaster `startDateTime`/`endDateTime` — UTC, trailing Z
 //   - SeatGeek     `datetime_local.gte`/`.lte`   — naive NYC wall clock
 //
-// so this returns both, from one source of truth, and ends at 4am to match.
+// fetchWindow spans the current evening's 5pm through tomorrow's 4am, so both
+// evenings can be served in a single request. It returns both API formats from
+// one source of truth.
 
 const NYC = "America/New_York";
 
