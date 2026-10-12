@@ -36,7 +36,7 @@ export function buildPrompt(event) {
 
   const venue = [event.venue_name, event.neighborhood].filter(Boolean).join(" in ");
 
-  return `You are writing a single punchy sentence for a NYC event discovery app. The sentence appears on the event card in italics — it's the one line that makes someone decide to go tonight.
+  return `You are writing a single punchy sentence for a NYC event discovery app. The sentence appears on the event card in italics — it's the one line that makes someone decide to go.
 
 Event:
 - Name: ${event.name}

@@ -90,6 +90,9 @@ test("the prompt forbids day words, because one hook is shown on two days", () =
   // evening, when that event is tonight.
   const prompt = buildPrompt({ name: "x", segment: "Music", genre: null, venue_name: "Smalls", neighborhood: null, is_free: false });
   assert.match(prompt, /Do not say "tonight" or "tomorrow"/);
+  // Besides the rule, the prompt should not contain day words anywhere
+  const rest = prompt.replace(/.*Do not say "tonight" or "tomorrow".*\n?/, "");
+  assert.ok(!/tonight|tomorrow/i.test(rest), `prompt contains day words outside the rule: ${rest}`);
 });
 
 test("hook candidates cover tonight and tomorrow, soonest first", () => {
