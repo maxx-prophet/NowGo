@@ -121,3 +121,92 @@ export function tonightWindow(now = new Date()) {
     utcEnd: utcStr(nycLocalToUtc(endY, endM, endD, WINDOW_END_HOUR)),
   };
 }
+
+// ─── TONIGHT AND TOMORROW ────────────────────────────────────────────────────
+//
+// An "evening" runs 5pm ET to 4am ET the next morning. The current evening is
+// the one containing `now`, or, between 4am and 5pm, the one starting at 5pm
+// today. "tonight" is what the feed has always served: from 30 minutes ago
+// (a show that just started is still worth walking into) to the current
+// evening's 4am end. "tomorrow" is the next evening, whole.
+//
+// These are instants handed to SQL as parameters. The SQL used to compute its
+// own window, and after midnight it ran to 4am the *following* day, a stretch
+// the fetchers never covered.
+
+export const NIGHTS = ["tonight", "tomorrow"];
+
+const GRACE_MS = 30 * 60 * 1000;
+
+function addDays({ year, month, day }, n) {
+  const d = new Date(Date.UTC(year, month - 1, day));
+  d.setUTCDate(d.getUTCDate() + n);
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+}
+
+const at = (date, hour) => nycLocalToUtc(date.year, date.month, date.day, hour);
+
+// The calendar dates whose 5pm starts tonight's and tomorrow's evenings.
+export function eveningDates(now = new Date()) {
+  const nyc = partsInZone(now, NYC);
+  const today = { year: nyc.year, month: nyc.month, day: nyc.day };
+  const tonight = nyc.hour < WINDOW_END_HOUR ? addDays(today, -1) : today;
+  return { tonight, tomorrow: addDays(tonight, 1) };
+}
+
+export function nightBounds(night, now = new Date()) {
+  const { tonight, tomorrow } = eveningDates(now);
+  if (night === "tonight") {
+    return {
+      start: new Date(now.getTime() - GRACE_MS),
+      end: at(addDays(tonight, 1), WINDOW_END_HOUR),
+    };
+  }
+  if (night === "tomorrow") {
+    return {
+      start: at(tomorrow, WINDOW_START_HOUR),
+      end: at(addDays(tomorrow, 1), WINDOW_END_HOUR),
+    };
+  }
+  throw new Error(`Unknown night: ${night}`);
+}
+
+// Which night an event belongs to. Used where the caller holds an event rather
+// than a feed request, e.g. alternatives for a sold-out show.
+export function nightOf(startTime, now = new Date()) {
+  const t = new Date(startTime).getTime();
+  const { start, end } = nightBounds("tomorrow", now);
+  return t >= start.getTime() && t < end.getTime() ? "tomorrow" : "tonight";
+}
+
+// What the fetchers must go and get: both evenings, in one request range.
+export function fetchWindow(now = new Date()) {
+  const { tonight, tomorrow } = eveningDates(now);
+  const end = addDays(tomorrow, 1);
+  return {
+    localStart: localStr(tonight.year, tonight.month, tonight.day, WINDOW_START_HOUR),
+    localEnd: localStr(end.year, end.month, end.day, WINDOW_END_HOUR),
+    utcStart: utcStr(at(tonight, WINDOW_START_HOUR)),
+    utcEnd: utcStr(at(end, WINDOW_END_HOUR)),
+  };
+}
+
+// Validates /events/tonight's `night` param. An unknown value is an error, not
+// a silent default. A typo that quietly returned tonight would look like
+// "tomorrow is broken".
+export function parseFeedNight({ night, surpriseMe }) {
+  const parsed = night == null || night === "" ? "tonight" : night;
+  if (!NIGHTS.includes(parsed)) {
+    return { status: 400, error: `night must be one of: ${NIGHTS.join(", ")}` };
+  }
+  if (parsed === "tomorrow" && surpriseMe) {
+    return { status: 400, error: "surprise_me is only available for tonight" };
+  }
+  return { night: parsed };
+}
+
+// The window as SQL, on caller-chosen placeholders bound to nightBounds().
+// Assumes the events table is aliased as `e`.
+export function nightWindowSql(startParam, endParam) {
+  return `e.start_time >= ${startParam} AND e.start_time < ${endParam}`;
+}
