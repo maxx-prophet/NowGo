@@ -1,24 +1,3 @@
-// The definition of "tonight", in one place.
-//
-// Was inlined separately in both /events/tonight query branches; alternatives.js
-// needs the identical window, and a third copy is how these drift. An
-// alternative computed against a wider window would offer an event the feed
-// itself refuses to show.
-//
-// Assumes the events table is aliased as `e`.
-//
-// Lower bound: 30 minutes ago, not now — a show that just started is still
-// worth walking into. This is also why the feed looks empty late at night;
-// that is correct behavior, not a bug.
-//
-// Upper bound: 4am the following NYC morning. Computed in America/New_York
-// explicitly because Railway runs UTC, where "today" is already tomorrow after
-// 8pm ET.
-export const TONIGHT_WINDOW_SQL = `
-  e.start_time > NOW() - interval '30 minutes'
-  AND e.start_time < (date_trunc('day', NOW() AT TIME ZONE 'America/New_York') + interval '1 day 4 hours') AT TIME ZONE 'America/New_York'
-`;
-
 // ─── FETCH WINDOW FOR BOTH EVENINGS ──────────────────────────────────────────
 //
 // The fetchers must go and *get* the same window the API will serve, and they
@@ -30,7 +9,7 @@ export const TONIGHT_WINDOW_SQL = `
 //
 //   17:00Z → 02:00Z  =  1pm → 10pm ET
 //
-// The whole 10pm–4am stretch was never fetched even though TONIGHT_WINDOW_SQL
+// The whole 10pm–4am stretch was never fetched even though the API
 // happily serves it, and a third of the request was spent on afternoon events.
 // SeatGeek's `datetime_local` params are naive local times, so the identical
 // helper was wrong in the opposite direction there — right on Railway by
@@ -47,7 +26,7 @@ export const TONIGHT_WINDOW_SQL = `
 const NYC = "America/New_York";
 
 const WINDOW_START_HOUR = 17; // 5pm ET
-const WINDOW_END_HOUR = 4; // 4am ET, matching TONIGHT_WINDOW_SQL's upper bound
+const WINDOW_END_HOUR = 4; // 4am ET, matching the end of nightBounds()
 
 function partsInZone(date, timeZone) {
   const fmt = new Intl.DateTimeFormat("en-US", {
@@ -103,6 +82,14 @@ const utcStr = (date) => `${date.toISOString().split(".")[0]}Z`;
 // today. "tonight" is what the feed has always served: from 30 minutes ago
 // (a show that just started is still worth walking into) to the current
 // evening's 4am end. "tomorrow" is the next evening, whole.
+//
+// Why the lower bound is 30 minutes ago and not now: a show that just started
+// is still worth walking into. It is also why the feed looks empty late at
+// night; that is correct behavior, not a bug.
+//
+// Why the bounds are computed here and not in SQL: Railway runs UTC, where
+// "today" is already tomorrow after 8pm ET, so every edge is built in
+// America/New_York explicitly.
 //
 // These are instants handed to SQL as parameters. The SQL used to compute its
 // own window, and after midnight it ran to 4am the *following* day, a stretch

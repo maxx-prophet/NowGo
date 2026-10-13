@@ -1,5 +1,5 @@
 import poolDefault from "../../db/index.js";
-import { TONIGHT_WINDOW_SQL } from "./tonight-window.js";
+import { nightBounds, nightOf, nightWindowSql } from "./tonight-window.js";
 import { WALK_IN_SQL } from "./walk-in.js";
 
 // How many alternatives to offer a sold-out event. Small on purpose: this
@@ -39,7 +39,7 @@ export function offersAlternatives(event) {
 // The bounding box mirrors the one in /events/tonight so the two agree on what
 // "near" means.
 //
-// $1 event_id, $2 lat, $3 lng, $4 start_time, $5 radius_km, $6 limit
+// $1 event_id, $2 lat, $3 lng, $4 start_time, $5 radius_km, $6 limit, $7 neighborhood, $8/$9 window
 export const ALTERNATIVES_SQL = `
   SELECT
     e.event_id, e.source, e.name, e.start_time,
@@ -59,7 +59,7 @@ export const ALTERNATIVES_SQL = `
     ) AS distance_km
   FROM events e
   JOIN venues v ON e.venue_id = v.venue_id
-  WHERE ${TONIGHT_WINDOW_SQL.trim()}
+  WHERE ${nightWindowSql("$8", "$9")}
     AND e.event_id != $1
     AND e.availability_tier NOT IN ('sold_out', 'cancelled')
     AND v.geo_lat IS NOT NULL
@@ -83,9 +83,12 @@ export const ALTERNATIVES_SQL = `
 
 // Never rejects. This is a side query on GET /events/:id — if it fails, the
 // user should still get the event they asked for, minus the suggestions.
-export async function fetchAlternatives(event, pool = poolDefault) {
+// Alternatives come from the sold-out event's own night: a show tomorrow
+// should be swapped for something else tomorrow, not for something tonight.
+export async function fetchAlternatives(event, pool = poolDefault, now = new Date()) {
   if (!offersAlternatives(event)) return [];
   try {
+    const { start, end } = nightBounds(nightOf(event.start_time, now), now);
     const { rows } = await pool.query(ALTERNATIVES_SQL, [
       event.event_id,
       event.venue_lat,
@@ -94,6 +97,8 @@ export async function fetchAlternatives(event, pool = poolDefault) {
       ALTERNATIVES_RADIUS_KM,
       MAX_ALTERNATIVES,
       event.neighborhood ?? null,
+      start,
+      end,
     ]);
     return rows;
   } catch (err) {

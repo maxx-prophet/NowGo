@@ -5,7 +5,7 @@ import { startScheduler, runPipeline } from "./scheduler.js";
 import { getTravelTime, computeLeaveBy } from "./services/travel.js";
 import { rankEvents, RANKING_POOL } from "./services/ranking.js";
 import { fetchAlternatives } from "./services/alternatives.js";
-import { TONIGHT_WINDOW_SQL } from "./services/tonight-window.js";
+import { nightBounds, nightWindowSql, parseFeedNight } from "./services/tonight-window.js";
 import { WALK_IN_SQL, fetchUncuratedVenues } from "./services/walk-in.js";
 import { NOT_ATTRACTION_SQL } from "./services/venue-type.js";
 import { checkPipelineToken } from "./services/pipeline-auth.js";
@@ -116,6 +116,9 @@ app.get("/venues/uncurated", async (req, res) => {
 //                     best first (30–90 min out scores highest); sold-out and
 //                     cancelled are excluded, an unknown tier is not
 //   include_sold_out — true: include sold-out events (default false)
+//   night           — tonight (default) | tomorrow. Tomorrow skips travel
+//                     enrichment (a leave-by from where you stand now is
+//                     wrong for tomorrow) and rejects surprise_me.
 //   include_attractions — true: include museums and other timed-entry venues,
 //                     which are excluded by default (see services/venue-type.js)
 
@@ -135,6 +138,10 @@ app.get("/events/tonight", async (req, res) => {
   const budgetMax = req.query.budget_max != null ? parseFloat(req.query.budget_max) : null;
   const walkInsOnly = req.query.walk_ins_only === "true";
   const includeAttractions = req.query.include_attractions === "true";
+  const parsedNight = parseFeedNight({ night: req.query.night, surpriseMe });
+  if (parsedNight.error) return res.status(parsedNight.status).json({ error: parsedNight.error });
+  const { night } = parsedNight;
+  const { start: windowStart, end: windowEnd } = nightBounds(night);
 
   try {
     let query, params;
@@ -158,7 +165,7 @@ app.get("/events/tonight", async (req, res) => {
           0 AS distance_m
         FROM events e
         LEFT JOIN venues v ON e.venue_id = v.venue_id
-        WHERE ${TONIGHT_WINDOW_SQL.trim()}
+        WHERE ${nightWindowSql("$6", "$7")}
           AND e.availability_tier != 'cancelled'
            ${walkInsOnly ? `AND ${WALK_IN_SQL}` : ""}
            ${includeAttractions ? "" : `AND ${NOT_ATTRACTION_SQL}`}
@@ -169,7 +176,7 @@ app.get("/events/tonight", async (req, res) => {
           ))
         ORDER BY distance_m ASC NULLS LAST, e.start_time ASC
         LIMIT $4`;
-      params = [lat, lng, radiusMiles, RANKING_POOL, segment];
+      params = [lat, lng, radiusMiles, RANKING_POOL, segment, windowStart, windowEnd];
     } else {
       query = `
         SELECT
@@ -188,14 +195,14 @@ app.get("/events/tonight", async (req, res) => {
           v.geo_lng     AS venue_lng
         FROM events e
         LEFT JOIN venues v ON e.venue_id = v.venue_id
-        WHERE ${TONIGHT_WINDOW_SQL.trim()}
+        WHERE ${nightWindowSql("$3", "$4")}
           AND e.availability_tier != 'cancelled'
            ${walkInsOnly ? `AND ${WALK_IN_SQL}` : ""}
            ${includeAttractions ? "" : `AND ${NOT_ATTRACTION_SQL}`}
           AND ($2::text IS NULL OR e.segment = $2 OR ($2 = 'Jazz' AND e.genre = 'Jazz') OR ($2 = 'Comedy' AND e.genre = 'Comedy') OR ($2 = 'Theatre' AND e.segment = 'Arts & Theatre'))
         ORDER BY e.start_time ASC
         LIMIT $1`;
-      params = [RANKING_POOL, segment];
+      params = [RANKING_POOL, segment, windowStart, windowEnd];
     }
 
     const { rows: raw } = await pool.query(query, params);
@@ -214,7 +221,9 @@ app.get("/events/tonight", async (req, res) => {
     const rows = collapseTimedEntry(dedupeListings(withAttributionAll(raw)));
 
     // Enrich with travel time when user location is known
-    let filterable = hasGeo
+    // Tomorrow gets no travel time: a leave-by worked out from where the user
+    // stands now is wrong for tomorrow, and it would spend Google Maps calls.
+    let filterable = hasGeo && night === "tonight"
       ? await Promise.all(
           rows.map(async (event) => {
             if (event.venue_lat == null || event.venue_lng == null) {
@@ -230,7 +239,9 @@ app.get("/events/tonight", async (req, res) => {
             };
           })
         )
-      : rows;
+      : hasGeo
+        ? rows.map((e) => ({ ...e, travel_minutes: null, leave_by: null, travel_source: null }))
+        : rows;
 
     if (budgetMax !== null) {
       filterable = filterable.filter((e) =>
@@ -265,6 +276,7 @@ app.get("/events/tonight", async (req, res) => {
         geo: hasGeo,
         mode: hasGeo ? mode : undefined,
         sort: surpriseMe ? "surprise_me" : sort,
+        night,
         events,
       });
     }
@@ -281,6 +293,7 @@ app.get("/events/tonight", async (req, res) => {
       geo: hasGeo,
       mode: hasGeo ? mode : undefined,
       sort,
+      night,
       events,
       sold_out_events: soldOut,
     });

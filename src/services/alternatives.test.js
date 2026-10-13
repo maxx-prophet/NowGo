@@ -7,7 +7,7 @@ import {
   ALTERNATIVES_SQL,
   fetchAlternatives,
 } from "./alternatives.js";
-import { TONIGHT_WINDOW_SQL } from "./tonight-window.js";
+import { nightWindowSql } from "./tonight-window.js";
 
 // A pool stand-in that records the query it was handed and returns fixed rows.
 function fakePool(rows = []) {
@@ -73,13 +73,28 @@ test("offersAlternatives tolerates a missing event", () => {
   assert.equal(offersAlternatives({}), false);
 });
 
-test("ALTERNATIVES_SQL reuses the shared tonight window verbatim", () => {
+test("ALTERNATIVES_SQL takes its window as parameters $8/$9", () => {
   // If alternatives used a wider window it would offer events the feed itself
   // refuses to show — the user taps through to something that isn't there.
-  assert.ok(
-    ALTERNATIVES_SQL.includes(TONIGHT_WINDOW_SQL.trim()),
-    "alternatives must use TONIGHT_WINDOW_SQL, not its own copy of the window"
-  );
+  assert.ok(ALTERNATIVES_SQL.includes(nightWindowSql("$8", "$9")));
+});
+
+test("a sold-out show tonight gets alternatives from tonight", async () => {
+  const pool = fakePool();
+  const now = new Date("2026-08-13T22:00:00Z"); // 6pm EDT
+  await fetchAlternatives(soldOut, pool, now); // soldOut starts 7:30pm Aug 13
+  const [, , , , , , , start, end] = pool.calls[0].params;
+  assert.equal(start.toISOString(), "2026-08-13T21:30:00.000Z"); // now − 30 min
+  assert.equal(end.toISOString(), "2026-08-14T08:00:00.000Z");
+});
+
+test("a sold-out show tomorrow gets alternatives from tomorrow", async () => {
+  const pool = fakePool();
+  const now = new Date("2026-08-13T22:00:00Z");
+  await fetchAlternatives({ ...soldOut, start_time: "2026-08-14T23:30:00.000Z" }, pool, now);
+  const [, , , , , , , start, end] = pool.calls[0].params;
+  assert.equal(start.toISOString(), "2026-08-14T21:00:00.000Z"); // Aug 14 5pm EDT
+  assert.equal(end.toISOString(), "2026-08-15T08:00:00.000Z");
 });
 
 test("ALTERNATIVES_SQL never offers a sold-out or cancelled event", () => {
@@ -146,7 +161,7 @@ test("fetchAlternatives returns nothing without querying when coordinates are mi
 
 test("fetchAlternatives passes id, coordinates, start time, radius, cap and neighborhood", async () => {
   const pool = fakePool();
-  await fetchAlternatives(soldOut, pool);
+  await fetchAlternatives(soldOut, pool, new Date("2026-08-13T22:00:00Z"));
   assert.equal(pool.calls.length, 1);
   assert.deepEqual(pool.calls[0].params, [
     "evt-1",
@@ -156,6 +171,8 @@ test("fetchAlternatives passes id, coordinates, start time, radius, cap and neig
     ALTERNATIVES_RADIUS_KM,
     MAX_ALTERNATIVES,
     "West Village",
+    new Date("2026-08-13T21:30:00.000Z"),
+    new Date("2026-08-14T08:00:00.000Z"),
   ]);
 });
 
