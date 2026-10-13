@@ -1,6 +1,9 @@
 import pool from "../../db/index.js";
 
 export async function runSurpriseScore() {
+  // Deliberately inline, not nightBounds(): Surprise Me is tonight-only and is
+  // hidden on the Tomorrow tab. nightBounds() in tonight-window.js is the shared
+  // definition used everywhere else; this is not a missed copy.
   const { rows } = await pool.query(`
     SELECT event_id, segment, genre, availability_tier
     FROM events

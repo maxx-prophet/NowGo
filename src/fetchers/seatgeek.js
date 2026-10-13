@@ -225,8 +225,8 @@ export async function fetchSeatGeek(tmEvents = [], aliasMap = new Map(), dbPool 
   console.log("\n📡 Fetching SeatGeek...");
   console.log(`   Window: ${start} → ${end}`);
 
-  // Same truncation as Ticketmaster: one page of 50, sorted ascending, so the
-  // late-evening events fall off the end on any busy night.
+  // Page through results (SG_PAGE_SIZE per page, sorted ascending) until the
+  // API's total is reached, a later page fails, or SG_MAX_EVENTS is hit.
   const raw = [];
   let page = 1;
   let total = Infinity;

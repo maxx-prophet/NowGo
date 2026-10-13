@@ -19,7 +19,8 @@
 //   - Ticketmaster `startDateTime`/`endDateTime` — UTC, trailing Z
 //   - SeatGeek     `datetime_local.gte`/`.lte`   — naive NYC wall clock
 //
-// fetchWindow spans the current evening's 5pm through tomorrow's 4am, so both
+// fetchWindow spans the current evening's 5pm through the 4am ending tomorrow evening (two calendar
+// days out), so both
 // evenings can be served in a single request. It returns both API formats from
 // one source of truth.
 

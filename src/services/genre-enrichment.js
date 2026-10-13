@@ -21,6 +21,7 @@ export async function runGenreEnrichment() {
     WHERE (segment IS NULL OR segment IN ('Undefined', 'Other'))
       AND genre_source IS NULL
       AND start_time > NOW() - interval '1 hour'
+    ORDER BY start_time
     LIMIT 100
   `);
 
