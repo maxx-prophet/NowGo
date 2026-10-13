@@ -43,7 +43,10 @@ export function shareMessage(
   const venue = event.venue_name ?? "a venue in NYC";
   const when = night === "tomorrow" ? "tomorrow night" : "tonight";
 
-  // (keep the existing sold-out comment)
+  // A sold-out show gets no leave-by and no link. Sending someone to a ticket
+  // page for a show with no tickets is the dead end the sold-out work exists
+  // to remove, and it is worse in a text message than in the app — the
+  // recipient has none of the context that would explain why it is a dead end.
   if (event.availability_tier === "sold_out") {
     return `${event.name} at ${venue} — sold out ${when}, sadly.${CREDIT}`;
   }
