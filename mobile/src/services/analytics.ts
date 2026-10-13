@@ -1,12 +1,18 @@
 import { usePostHog } from "posthog-react-native";
+import type { Night } from "../types";
 
 // Typed event capture hook — use this instead of calling posthog directly
 export function useAnalytics() {
   const posthog = usePostHog();
 
   return {
-    feedLoaded: (count: number, segment: string) =>
-      posthog?.capture("feed_loaded", { event_count: count, segment }),
+    feedLoaded: (count: number, segment: string, night: Night) =>
+      posthog?.capture("feed_loaded", { event_count: count, segment, night }),
+
+    // `auto` separates the late-night auto-switch from a deliberate tap, so
+    // the notice's "back to tonight" rate says whether the switch was wanted.
+    nightSwitched: (to: Night, auto: boolean) =>
+      posthog?.capture("night_switched", { to, auto }),
 
     eventTapped: (eventId: string, eventName: string, segment: string | null | undefined) =>
       posthog?.capture("event_tapped", { event_id: eventId, event_name: eventName, segment: segment ?? null }),

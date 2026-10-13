@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState, useCallback } from "react";
+import { useEffect, useLayoutEffect, useState, useCallback, useRef } from "react";
 import {
   View, Text, FlatList, TouchableOpacity,
   ActivityIndicator, StyleSheet, RefreshControl, Linking, Share,
@@ -10,7 +10,8 @@ import EventCard from "../components/EventCard";
 import FilterSheet from "../components/FilterSheet";
 import SurpriseSheet from "../components/SurpriseSheet";
 import { fetchTonightEvents } from "../api/nowgo";
-import type { Event, AppNavProp } from "../types";
+import type { Event, AppNavProp, Night } from "../types";
+import { shouldOpenOnTomorrow, autoSwitchNotice } from "../services/night";
 import { useAnalytics } from "../services/analytics";
 import { useLocation } from "../hooks/useLocation";
 import { useFeedback } from "../hooks/useFeedback";
@@ -71,6 +72,20 @@ export default function TonightFeed({ navigation }: Props) {
   const [mode, setMode] = useState<"transit" | "walk" | "drive">("transit");
   const [sortBy, setSortBy] = useState<"best" | "soonest" | "nearest" | "cheapest">("best");
   const [walkInsOnly, setWalkInsOnly] = useState(false);
+  const [night, setNight] = useState<Night>("tonight");
+  // Set when the feed switched itself to tomorrow; the notice explains why
+  // and is the one-tap way back. Cleared by any deliberate switch.
+  const [autoNotice, setAutoNotice] = useState<string | null>(null);
+  // The auto-switch is decided once, on the first tonight load that succeeds.
+  // After that a tap on Tonight must stay on Tonight.
+  const autoDecided = useRef(false);
+
+  function selectNight(next: Night) {
+    if (next === night) return;
+    setAutoNotice(null);
+    setNight(next);
+    analytics.nightSwitched(next, false);
+  }
 
   // Set once a located search comes back empty while events exist elsewhere:
   // the user is outside the NYC coverage area. `ignoreLocation` is their way
@@ -138,12 +153,22 @@ export default function TonightFeed({ navigation }: Props) {
         budgetMax,
         sortBy,
         walkInsOnly,
+        night,
       });
       const loaded = data.events ?? [];
       const soldOut = data.sold_out_events ?? [];
       setEvents(loaded);
       setSoldOutEvents(soldOut);
-      analytics.feedLoaded(loaded.length, category);
+      if (!autoDecided.current && night === "tonight") {
+        autoDecided.current = true;
+        if (shouldOpenOnTomorrow(new Date(), loaded.length)) {
+          setAutoNotice(autoSwitchNotice(loaded.length));
+          setNight("tomorrow"); // re-runs load via its dependency on night
+          analytics.nightSwitched("tomorrow", true);
+          return;
+        }
+      }
+      analytics.feedLoaded(loaded.length, category, night);
       if (soldOut.length > 0) analytics.soldOutShown(soldOut.length, loaded.length);
 
       // An empty located search has two very different causes — the user is
@@ -152,7 +177,7 @@ export default function TonightFeed({ navigation }: Props) {
       // the one case that is ambiguous.
       if (loaded.length === 0 && soldOut.length === 0 && searchCoords && !isFiltered) {
         try {
-          const everywhere = await fetchTonightEvents({ mode, sortBy });
+          const everywhere = await fetchTonightEvents({ mode, sortBy, night });
           const count = (everywhere.events ?? []).length;
           setNationwideCount(count);
           if (count > 0) analytics.outsideCoverageShown(count);
@@ -169,7 +194,7 @@ export default function TonightFeed({ navigation }: Props) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [coords, category, mode, budgetMax, sortBy, walkInsOnly, ignoreLocation, isFiltered]);
+  }, [coords, category, mode, budgetMax, sortBy, walkInsOnly, ignoreLocation, isFiltered, night]);
 
   function clearFilters() {
     setCategory(ALL_CATEGORIES);
@@ -205,6 +230,30 @@ export default function TonightFeed({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
+      {/* Tonight / Tomorrow. Every filter below applies to whichever is chosen. */}
+      <View style={styles.nightSwitch}>
+        {(["tonight", "tomorrow"] as const).map((n) => (
+          <TouchableOpacity
+            key={n}
+            style={[styles.nightOption, night === n && styles.nightOptionActive]}
+            onPress={() => selectNight(n)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: night === n }}
+          >
+            <Text style={[styles.nightOptionText, night === n && styles.nightOptionTextActive]}>
+              {n === "tonight" ? "Tonight" : "Tomorrow"}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      {autoNotice ? (
+        <TouchableOpacity style={styles.autoNotice} onPress={() => selectNight("tonight")} activeOpacity={0.7}>
+          <Text style={styles.autoNoticeText}>
+            {autoNotice} <Text style={styles.autoNoticeLink}>Back to tonight</Text>
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+
       {/* Row 1 — Category pills */}
       <View style={styles.categoryRowWrap}>
         <FlatList
@@ -313,10 +362,12 @@ export default function TonightFeed({ navigation }: Props) {
         </View>
       </View>
 
-      {/* Surprise Me button */}
-      <TouchableOpacity style={styles.surpriseBtn} onPress={() => { loadSurprise(); analytics.surpriseMeTapped(); }}>
-        <Text style={styles.surpriseBtnText}>🎲  Surprise Me</Text>
-      </TouchableOpacity>
+      {/* Surprise Me means "the next 30–90 minutes", so it has no tomorrow. */}
+      {night === "tonight" ? (
+        <TouchableOpacity style={styles.surpriseBtn} onPress={() => { loadSurprise(); analytics.surpriseMeTapped(); }}>
+          <Text style={styles.surpriseBtnText}>🎲  Surprise Me</Text>
+        </TouchableOpacity>
+      ) : null}
 
       {/* Location permission nudge — shown only when denied */}
       {permissionStatus === "denied" && (
@@ -382,7 +433,7 @@ export default function TonightFeed({ navigation }: Props) {
                 return (
                   <>
                     <Text style={styles.emptyText}>
-                      {reason === "filtered" ? "No events match your filters" : "No events tonight"}
+                      {reason === "filtered" ? "No events match your filters" : night === "tomorrow" ? "Nothing listed for tomorrow night yet" : "No events tonight"}
                     </Text>
                     {reason === "filtered" && (
                       <TouchableOpacity style={styles.clearBtn} onPress={clearFilters}>
@@ -424,6 +475,7 @@ export default function TonightFeed({ navigation }: Props) {
                       event={item}
                       index={i}
                       hasOrigin={hasOrigin}
+                      night={night}
                       onPress={() => {
                         analytics.eventTapped(item.event_id, item.name, item.segment);
                         navigation.navigate("EventDetail", {
@@ -431,6 +483,7 @@ export default function TonightFeed({ navigation }: Props) {
                           userLat: coords?.latitude ?? null,
                           userLng: coords?.longitude ?? null,
                           initialMode: mode,
+                          night,
                         });
                       }}
                     />
@@ -470,7 +523,7 @@ export default function TonightFeed({ navigation }: Props) {
               numberOfLines={1}
               ellipsizeMode="tail"
             >
-              {events.length} events
+              {events.length} events{night === "tomorrow" ? " tomorrow" : ""}
               {coords && !ignoreLocation ? " · near you" : " · NYC"}
             </Text>
           ) : null
@@ -480,6 +533,7 @@ export default function TonightFeed({ navigation }: Props) {
             event={item}
             index={index}
             hasOrigin={hasOrigin}
+            night={night}
             onPress={() => {
               analytics.eventTapped(item.event_id, item.name, item.segment);
               navigation.navigate("EventDetail", {
@@ -487,6 +541,7 @@ export default function TonightFeed({ navigation }: Props) {
                 userLat: coords?.latitude ?? null,
                 userLng: coords?.longitude ?? null,
                 initialMode: mode,
+                night,
               });
             }}
           />
@@ -575,6 +630,17 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     fontSize: 18,
   },
+  nightSwitch: {
+    flexDirection: "row", marginHorizontal: 16, marginTop: 12, padding: 3,
+    backgroundColor: "#1A1A1A", borderRadius: 10, borderWidth: 1, borderColor: "#2A2A2A",
+  },
+  nightOption: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: "center" },
+  nightOptionActive: { backgroundColor: "#FF6B35" },
+  nightOptionText: { color: "#9CA3AF", fontSize: 14, fontWeight: "600" },
+  nightOptionTextActive: { color: "#FFFFFF", fontWeight: "700" },
+  autoNotice: { marginHorizontal: 16, marginTop: 8, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: "#161616", borderRadius: 8 },
+  autoNoticeText: { color: "#9CA3AF", fontSize: 13 },
+  autoNoticeLink: { color: "#FF6B35", fontWeight: "600" },
   chipRow: { paddingHorizontal: 16, paddingVertical: 12, gap: 8, alignItems: 'center' },
   chip: {
     paddingHorizontal: 14,
