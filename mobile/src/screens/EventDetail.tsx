@@ -86,7 +86,8 @@ function openMapsDirections(
 }
 
 export default function EventDetail({ route, navigation }: Props) {
-  const { event, userLat, userLng, initialMode = "transit" } = route.params;
+  const { event, userLat, userLng, initialMode = "transit", night = "tonight" } = route.params;
+  const isTomorrow = night === "tomorrow";
 
   const hasGeo = userLat != null && userLng != null
     && event.venue_lat != null && event.venue_lng != null;
@@ -124,7 +125,7 @@ export default function EventDetail({ route, navigation }: Props) {
   }, [event.event_id, isSoldOut]);
 
   async function switchMode(newMode: TravelMode) {
-    if (newMode === mode || !hasGeo) return;
+    if (isTomorrow || newMode === mode || !hasGeo) return;
     setMode(newMode);
     setTravelLoading(true);
     analytics.travelModeChanged(event.event_id, newMode);
@@ -147,6 +148,45 @@ export default function EventDetail({ route, navigation }: Props) {
 
   const lb = leaveByDisplay(leaveBy);
   const badge = getAvailabilityBadge(event.availability_tier, event.start_time);
+
+  // Tomorrow, the useful thing to do with an event is remember it, so Add to
+  // Calendar leads and the ticket link steps down to a secondary button.
+  //
+  // Add to Calendar. Goes through the system event editor, which needs no
+  // calendar permission — the user sees the prefilled entry and saves it
+  // themselves. The alarm is the leave-by time when it is still ahead (computed
+  // at tap, like Share), else 30 minutes before; the entry's notes say which,
+  // and where the leave-by came from.
+  const calendarButton = (
+    <TouchableOpacity
+      style={isTomorrow ? styles.ticketsBtn : styles.shareBtn}
+      onPress={async () => {
+        const entry = calendarEntryFor(event, isTomorrow ? null : leaveBy);
+        try {
+          const result = await Calendar.createEventInCalendarAsync({
+            title: entry.title,
+            startDate: entry.startDate,
+            endDate: entry.endDate,
+            location: entry.location ?? undefined,
+            url: entry.url,
+            notes: entry.notes,
+            alarms: entry.alarms.map((a) =>
+              "absoluteDate" in a ? { absoluteDate: a.absoluteDate } : { relativeOffset: a.relativeOffset }
+            ),
+            timeZone: "America/New_York",
+          });
+          analytics.eventSavedToCalendar(event.event_id, result.action, entry.alarmKind);
+        } catch {
+          // The editor failed to open or was dismissed mid-way. Nothing
+          // for the user to fix, so nothing to say.
+        }
+      }}
+    >
+      <Text style={isTomorrow ? styles.ticketsBtnText : styles.shareBtnText}>
+        {entryAlarmLabel(isTomorrow ? null : leaveBy)}
+      </Text>
+    </TouchableOpacity>
+  );
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -195,7 +235,7 @@ export default function EventDetail({ route, navigation }: Props) {
       </View>
 
       {/* Leave-by card */}
-      {(lb || hasGeo) ? (
+      {!isTomorrow && (lb || hasGeo) ? (
         <View style={[styles.leaveCard, lb && { borderColor: lb.color }]}>
           <Text style={styles.leaveCardLabel}>YOUR LEAVE TIME</Text>
 
@@ -250,6 +290,8 @@ export default function EventDetail({ route, navigation }: Props) {
 
       {/* CTA row */}
       <View style={styles.ctaRow}>
+        {isTomorrow ? calendarButton : null}
+
         {/* Primary: tickets or walk-in note.
             A sold-out event gets neither — sending someone to a ticket page
             for a show with no tickets is the dead end this screen exists to
@@ -260,10 +302,10 @@ export default function EventDetail({ route, navigation }: Props) {
           </View>
         ) : event.url ? (
           <TouchableOpacity
-            style={styles.ticketsBtn}
+            style={isTomorrow ? styles.directionsBtn : styles.ticketsBtn}
             onPress={() => { analytics.ticketsTapped(event.event_id, event.name); Linking.openURL(event.url!); }}
           >
-            <Text style={styles.ticketsBtnText}>Get Tickets →</Text>
+            <Text style={isTomorrow ? styles.directionsBtnText : styles.ticketsBtnText}>Get Tickets →</Text>
           </TouchableOpacity>
         ) : null}
 
@@ -287,7 +329,7 @@ export default function EventDetail({ route, navigation }: Props) {
           onPress={async () => {
             analytics.eventShared(event.event_id, event.availability_tier);
             try {
-              await Share.share({ message: shareMessage(event, leaveBy) });
+              await Share.share({ message: shareMessage(event, leaveBy, new Date(), night) });
             } catch {
               // A failed or dismissed share sheet is not worth interrupting
               // anyone over — there is nothing for the user to fix.
@@ -297,39 +339,7 @@ export default function EventDetail({ route, navigation }: Props) {
           <Text style={styles.shareBtnText}>↗ Share</Text>
         </TouchableOpacity>
 
-        {/* Add to Calendar. Goes through the system event editor, which needs
-            no calendar permission — the user sees the prefilled entry and
-            saves it themselves. The alarm is the leave-by time when it is
-            still ahead (computed at tap, like Share), else 30 minutes before;
-            the entry's notes say which, and where the leave-by came from. */}
-        <TouchableOpacity
-          style={styles.shareBtn}
-          onPress={async () => {
-            const entry = calendarEntryFor(event, leaveBy);
-            try {
-              const result = await Calendar.createEventInCalendarAsync({
-                title: entry.title,
-                startDate: entry.startDate,
-                endDate: entry.endDate,
-                location: entry.location ?? undefined,
-                url: entry.url,
-                notes: entry.notes,
-                alarms: entry.alarms.map((a) =>
-                  "absoluteDate" in a ? { absoluteDate: a.absoluteDate } : { relativeOffset: a.relativeOffset }
-                ),
-                timeZone: "America/New_York",
-              });
-              analytics.eventSavedToCalendar(event.event_id, result.action, entry.alarmKind);
-            } catch {
-              // The editor failed to open or was dismissed mid-way. Nothing
-              // for the user to fix, so nothing to say.
-            }
-          }}
-        >
-          <Text style={styles.shareBtnText}>
-            {entryAlarmLabel(leaveBy)}
-          </Text>
-        </TouchableOpacity>
+        {isTomorrow ? null : calendarButton}
       </View>
 
       {/* Alternatives — only for a sold-out event, and only if we found any. */}
@@ -350,6 +360,7 @@ export default function EventDetail({ route, navigation }: Props) {
                   userLat,
                   userLng,
                   initialMode: mode,
+                  night,
                 });
               }}
             >

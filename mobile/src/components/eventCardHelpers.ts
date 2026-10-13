@@ -55,6 +55,12 @@ export function formatTimeSpan(iso: string, showtimes: string[] | null | undefin
   return firstMeridiem === lastMeridiem ? `${firstTime}–${last}` : `${first}–${last}`;
 }
 
+// What a tomorrow card shows where tonight's shows the leave-by. There is no
+// leave-by and no "starts in" for tomorrow: both would be computed from now.
+export function tomorrowLabel(startTime: string, showtimes?: string[] | null): string {
+  return `Tomorrow ${formatTimeSpan(startTime, showtimes)}`;
+}
+
 export function formatPrice(
   min: number | null | undefined,
   max: number | null | undefined,

@@ -3,9 +3,9 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Animated,
 } from "react-native";
 import { useCramped } from "../hooks/useCramped";
-import type { Event } from "../types";
+import type { Event, Night } from "../types";
 import {
-  formatTimeSpan, formatPrice, leaveByResult, contextualLabelResult, getAvailabilityBadge,
+  formatTimeSpan, tomorrowLabel, formatPrice, leaveByResult, contextualLabelResult, getAvailabilityBadge,
 } from "./eventCardHelpers";
 
 const SEGMENT_COLORS: Record<string, string> = {
@@ -42,9 +42,11 @@ interface EventCardProps {
   // False when the feed was loaded without the user's coordinates, so no
   // travel time was ever computed and none should be reported as missing.
   hasOrigin?: boolean;
+  // Which night the feed is showing. Tomorrow has no leave-by and no countdown.
+  night?: Night;
 }
 
-export default function EventCard({ event, onPress, index = 0, hasOrigin = true }: EventCardProps) {
+export default function EventCard({ event, onPress, index = 0, hasOrigin = true, night = "tonight" }: EventCardProps) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(12)).current;
 
@@ -66,8 +68,13 @@ export default function EventCard({ event, onPress, index = 0, hasOrigin = true 
   const badge = getAvailabilityBadge(event.availability_tier, event.start_time, now);
   const price = formatPrice(event.price_min, event.price_max, event.is_free);
   const timeStr = formatTimeSpan(event.start_time, event.showtimes);
-  const lb = leaveByResult(event.leave_by, event.availability_tier, now);
-  const ctx = contextualLabelResult(event.start_time, event.travel_minutes, now, hasOrigin);
+  const isTomorrow = night === "tomorrow";
+  const lb = isTomorrow
+    ? { text: "", color: "#22C55E", bold: false }
+    : leaveByResult(event.leave_by, event.availability_tier, now);
+  const ctx = isTomorrow
+    ? { text: tomorrowLabel(event.start_time, event.showtimes), color: "#60a5fa" }
+    : contextualLabelResult(event.start_time, event.travel_minutes, now, hasOrigin);
 
   // Both pill rows pair a flexible label with a sibling that refuses to shrink.
   // At large Dynamic Type sizes the rigid side wins and crushes the label to an

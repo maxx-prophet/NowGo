@@ -5,6 +5,7 @@ import {
   leaveByResult,
   contextualLabelResult,
   getAvailabilityBadge,
+  tomorrowLabel,
 } from "./eventCardHelpers.ts";
 
 // formatPrice
@@ -175,4 +176,15 @@ test("formatTimeSpan: a range crossing noon keeps both meridiems", () => {
 
 test("formatTimeSpan: one listed slot is not a range", () => {
   assert.equal(formatTimeSpan("2026-09-19T20:45:00.000Z", ["2026-09-19T20:45:00.000Z"]), "4:45 PM");
+});
+
+test("tomorrowLabel names the day and the start time in NYC", () => {
+  assert.equal(tomorrowLabel("2026-09-03T00:00:00Z"), "Tomorrow 8:00 PM"); // 8pm EDT
+});
+
+test("tomorrowLabel shows a timed-entry span", () => {
+  assert.equal(
+    tomorrowLabel("2026-09-02T14:00:00Z", ["2026-09-02T14:00:00Z", "2026-09-02T16:00:00Z"]),
+    "Tomorrow 10:00 AM–12:00 PM" // 10am–noon EDT; meridiems differ so both are kept
+  );
 });
