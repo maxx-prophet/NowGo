@@ -47,7 +47,7 @@ export interface Event {
   venue_lat?: number | null;
   venue_lng?: number | null;
   // Only sent by GET /events/:id, and only for a sold-out event: up to three
-  // things nearby tonight you can still get into. Absent everywhere else.
+  // things nearby that same night you can still get into. Absent everywhere else.
   alternatives?: Event[] | null;
 }
 

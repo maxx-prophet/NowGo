@@ -80,11 +80,16 @@ export default function TonightFeed({ navigation }: Props) {
   // After that a tap on Tonight must stay on Tonight.
   const autoDecided = useRef(false);
 
-  function selectNight(next: Night) {
+  // Bumped by every load. The first load runs before location arrives and the
+  // located tonight request is slow, so without this a stale tonight response
+  // can land after a later Tomorrow request and overwrite it.
+  const requestId = useRef(0);
+
+  function selectNight(next: Night, via: "switch" | "notice") {
     if (next === night) return;
     setAutoNotice(null);
     setNight(next);
-    analytics.nightSwitched(next, false);
+    analytics.nightSwitched(next, false, via);
   }
 
   // Set once a located search comes back empty while events exist elsewhere:
@@ -132,6 +137,7 @@ export default function TonightFeed({ navigation }: Props) {
     // Dropping the coordinates is what "Browse NYC anyway" does — the API
     // treats an unlocated request as unbounded and returns the whole feed.
     const searchCoords = ignoreLocation ? undefined : coords;
+    const myId = ++requestId.current;
     try {
       if (isRefresh) {
         setRefreshing(true);
@@ -155,19 +161,23 @@ export default function TonightFeed({ navigation }: Props) {
         walkInsOnly,
         night,
       });
+      if (myId !== requestId.current) return;
       const loaded = data.events ?? [];
       const soldOut = data.sold_out_events ?? [];
-      setEvents(loaded);
-      setSoldOutEvents(soldOut);
+      // Decide the auto-switch before painting, so tonight's rows never flash
+      // under the Tomorrow tab. Returning here leaves loading true; the new
+      // load that setNight triggers takes over.
       if (!autoDecided.current && night === "tonight") {
         autoDecided.current = true;
         if (shouldOpenOnTomorrow(new Date(), loaded.length)) {
           setAutoNotice(autoSwitchNotice(loaded.length));
           setNight("tomorrow"); // re-runs load via its dependency on night
-          analytics.nightSwitched("tomorrow", true);
+          analytics.nightSwitched("tomorrow", true, "auto");
           return;
         }
       }
+      setEvents(loaded);
+      setSoldOutEvents(soldOut);
       analytics.feedLoaded(loaded.length, category, night);
       if (soldOut.length > 0) analytics.soldOutShown(soldOut.length, loaded.length);
 
@@ -178,21 +188,26 @@ export default function TonightFeed({ navigation }: Props) {
       if (loaded.length === 0 && soldOut.length === 0 && searchCoords && !isFiltered) {
         try {
           const everywhere = await fetchTonightEvents({ mode, sortBy, night });
+          if (myId !== requestId.current) return;
           const count = (everywhere.events ?? []).length;
           setNationwideCount(count);
           if (count > 0) analytics.outsideCoverageShown(count);
         } catch {
+          if (myId !== requestId.current) return;
           // Best effort. A failed probe leaves nationwideCount null, which
           // resolves to the ordinary empty message rather than a guess.
           setNationwideCount(null);
         }
       }
     } catch (err) {
+      if (myId !== requestId.current) return;
       setError(err instanceof Error ? err.message : "Unknown error");
       analytics.captureError(err instanceof Error ? err : new Error(String(err)), { segment: category });
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (myId === requestId.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [coords, category, mode, budgetMax, sortBy, walkInsOnly, ignoreLocation, isFiltered, night]);
 
@@ -236,7 +251,7 @@ export default function TonightFeed({ navigation }: Props) {
           <TouchableOpacity
             key={n}
             style={[styles.nightOption, night === n && styles.nightOptionActive]}
-            onPress={() => selectNight(n)}
+            onPress={() => selectNight(n, "switch")}
             accessibilityRole="button"
             accessibilityState={{ selected: night === n }}
           >
@@ -247,7 +262,7 @@ export default function TonightFeed({ navigation }: Props) {
         ))}
       </View>
       {autoNotice ? (
-        <TouchableOpacity style={styles.autoNotice} onPress={() => selectNight("tonight")} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.autoNotice} onPress={() => selectNight("tonight", "notice")} activeOpacity={0.7}>
           <Text style={styles.autoNoticeText}>
             {autoNotice} <Text style={styles.autoNoticeLink}>Back to tonight</Text>
           </Text>
@@ -415,7 +430,7 @@ export default function TonightFeed({ navigation }: Props) {
                     <>
                       <Text style={styles.emptyTitle}>NowGo is NYC-only for now</Text>
                       <Text style={styles.emptyText}>
-                        You're outside the area we cover, so there's nothing on near you tonight.
+                        You're outside the area we cover, so there's nothing on near you {night === "tomorrow" ? "tomorrow night" : "tonight"}.
                       </Text>
                       <TouchableOpacity
                         style={styles.clearBtn}

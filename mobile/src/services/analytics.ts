@@ -11,8 +11,8 @@ export function useAnalytics() {
 
     // `auto` separates the late-night auto-switch from a deliberate tap, so
     // the notice's "back to tonight" rate says whether the switch was wanted.
-    nightSwitched: (to: Night, auto: boolean) =>
-      posthog?.capture("night_switched", { to, auto }),
+    nightSwitched: (to: Night, auto: boolean, via: "switch" | "notice" | "auto") =>
+      posthog?.capture("night_switched", { to, auto, via }),
 
     eventTapped: (eventId: string, eventName: string, segment: string | null | undefined) =>
       posthog?.capture("event_tapped", { event_id: eventId, event_name: eventName, segment: segment ?? null }),
