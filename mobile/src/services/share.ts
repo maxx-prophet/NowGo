@@ -1,4 +1,4 @@
-import type { Event } from "../types";
+import type { Event, Night } from "../types";
 
 // The message a share produces. Pure and self-contained, like the other
 // services here, so it runs under `node --test` without a bundler.
@@ -37,21 +37,22 @@ const CREDIT = "\n\nFound with NowGo · nowgoapp.com";
 export function shareMessage(
   event: Pick<Event, "name" | "venue_name" | "url" | "availability_tier">,
   leaveBy?: string | null,
-  now: Date = new Date()
+  now: Date = new Date(),
+  night: Night = "tonight"
 ): string {
   const venue = event.venue_name ?? "a venue in NYC";
+  const when = night === "tomorrow" ? "tomorrow night" : "tonight";
 
-  // A sold-out show gets no leave-by and no link. Sending someone to a ticket
-  // page for a show with no tickets is the dead end the sold-out work exists
-  // to remove, and it is worse in a text message than in the app — the
-  // recipient has none of the context that would explain why it is a dead end.
+  // (keep the existing sold-out comment)
   if (event.availability_tier === "sold_out") {
-    return `${event.name} at ${venue} — sold out tonight, sadly.${CREDIT}`;
+    return `${event.name} at ${venue} — sold out ${when}, sadly.${CREDIT}`;
   }
 
-  const opening = isStillUseful(leaveBy, now)
+  // A leave-by is only ever about tonight. For tomorrow it would be advice
+  // computed from where the user stands right now, so it is never sent.
+  const opening = night === "tonight" && isStillUseful(leaveBy, now)
     ? `${event.name} at ${venue} — leave by ${formatTime(leaveBy!)} to make it.`
-    : `${event.name} at ${venue}, tonight.`;
+    : `${event.name} at ${venue}, ${when}.`;
 
   return (event.url ? `${opening} ${event.url}` : opening) + CREDIT;
 }

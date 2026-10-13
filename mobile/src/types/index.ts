@@ -1,6 +1,8 @@
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
 
+export type Night = "tonight" | "tomorrow";
+
 export interface Event {
   event_id: string;
   // Which listing source this came from: 'ticketmaster' | 'seatgeek' | 'jazz_nyc'.
@@ -52,6 +54,7 @@ export interface Event {
 export interface TonightFeedResponse {
   count: number;
   events: Event[];
+  night?: Night;
   // Sold-out events are returned separately rather than mixed into `events`,
   // so the feed stays a list of things you can actually go to. Absent when the
   // request asked for surprise_me or include_sold_out.
@@ -68,6 +71,7 @@ export interface FetchEventsParams {
   sortBy?: "best" | "soonest" | "nearest" | "cheapest";
   walkInsOnly?: boolean;
   surpriseMe?: boolean;
+  night?: Night;
 }
 
 export type UserIdentity = "local" | "transplant" | "visitor";
@@ -88,6 +92,7 @@ export type RootStackParamList = {
     userLat: number | null;
     userLng: number | null;
     initialMode: TravelMode;
+    night?: Night; // Which night the feed was showing. Decides the tomorrow variant; absent means tonight.
   };
   Filters: {
     mode: TravelMode;

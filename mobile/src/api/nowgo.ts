@@ -28,6 +28,7 @@ export async function fetchTonightEvents(
     sortBy = "best",
     walkInsOnly = false,
     surpriseMe = false,
+    night = "tonight",
   }: FetchEventsParams = {}
 ): Promise<TonightFeedResponse> {
   const params = new URLSearchParams({ limit: "50", radius_miles: String(radiusMiles) });
@@ -41,6 +42,7 @@ export async function fetchTonightEvents(
   params.set("sort", SORT_API_MAP[sortBy ?? "best"] ?? "best_match");
   if (walkInsOnly) params.set("walk_ins_only", "true");
   if (surpriseMe) params.set("surprise_me", "true");
+  params.set("night", night);
 
   const res = await fetch(`${API_BASE}/events/tonight?${params}`);
   if (!res.ok) throw new Error(`API error ${res.status}`);

@@ -105,3 +105,15 @@ test("an invite says what the app does, in one breath", () => {
   assert.match(msg, /iPhone/);
   assert.ok(msg.length < 200, "short enough to read in a notification");
 });
+
+test("a tomorrow share says tomorrow night and never a leave-by", () => {
+  const msg = shareMessage(base, IN_AN_HOUR, NOW, "tomorrow");
+  assert.match(msg, /^Makoto Ozone Trio at Birdland Jazz Club, tomorrow night\. https:/);
+  assert.ok(!/leave by/.test(msg));
+  assert.ok(!/tonight/.test(msg));
+});
+
+test("a sold-out tomorrow share does not say tonight", () => {
+  const msg = shareMessage({ ...base, availability_tier: "sold_out" }, null, NOW, "tomorrow");
+  assert.match(msg, /sold out tomorrow night, sadly\./);
+});
