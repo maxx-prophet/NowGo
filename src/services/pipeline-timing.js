@@ -9,8 +9,9 @@ function fmt(ms) {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-export function createStageTimer({ now = () => performance.now(), log = console.log } = {}) {
+export function createStageTimer({ now = () => performance.now(), log = console.log, logError = console.error } = {}) {
   const stages = [];
+  const failures = [];
 
   return {
     // Runs fn and records how long it took under `label`. The timing is kept
@@ -26,8 +27,25 @@ export function createStageTimer({ now = () => performance.now(), log = console.
       }
     },
 
+    // Like stage(), but a failure is logged and recorded instead of rethrown,
+    // and `fallback` is returned. For stages the rest of the run can do
+    // without: one dead source or API key must not stop everything after it.
+    async optional(label, fn, fallback = null) {
+      try {
+        return await this.stage(label, fn);
+      } catch (err) {
+        logError(`  ❌ ${label} failed (continuing): ${err.message}`);
+        failures.push({ label, error: err.message });
+        return fallback;
+      }
+    },
+
     stages() {
       return stages.map(s => ({ ...s }));
+    },
+
+    failures() {
+      return failures.map(f => ({ ...f }));
     },
 
     // Slowest first, so the answer to "where did the time go" is line one.

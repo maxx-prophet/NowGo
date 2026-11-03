@@ -45,3 +45,32 @@ test("report() logs the total and each stage slowest-first with its share", asyn
     "       1.0s  20%  fetch",
   ]);
 });
+
+test("optional() returns the result when the function succeeds and records no failure", async () => {
+  const timer = createStageTimer({ now: fakeClock([0, 10]), log: () => {}, logError: () => {} });
+  const result = await timer.optional("fetch:ticketmaster", async () => [1, 2]);
+  assert.deepEqual(result, [1, 2]);
+  assert.deepEqual(timer.failures(), []);
+});
+
+// A dead Ticketmaster key (401) used to abort the whole run, so no source was
+// ingested and no hooks were written. A failure must stop only its own stage.
+test("optional() swallows a failure, logs it, records it, and returns the fallback", async () => {
+  const errors = [];
+  const timer = createStageTimer({ now: fakeClock([0, 5, 5, 9]), log: () => {}, logError: l => errors.push(l) });
+  const result = await timer.optional("fetch:ticketmaster", async () => { throw new Error("TM API error: 401"); }, []);
+  const next = await timer.optional("fetch:jazz-nyc", async () => ["set"]);
+  assert.deepEqual(result, []);
+  assert.deepEqual(next, ["set"]);
+  assert.deepEqual(errors, ["  ❌ fetch:ticketmaster failed (continuing): TM API error: 401"]);
+  assert.deepEqual(timer.failures(), [{ label: "fetch:ticketmaster", error: "TM API error: 401" }]);
+  assert.deepEqual(timer.stages(), [
+    { label: "fetch:ticketmaster", ms: 5 },
+    { label: "fetch:jazz-nyc", ms: 4 },
+  ]);
+});
+
+test("optional() returns null by default when the function throws", async () => {
+  const timer = createStageTimer({ now: fakeClock([0, 1]), log: () => {}, logError: () => {} });
+  assert.equal(await timer.optional("hook-generation", async () => { throw new Error("401"); }), null);
+});
