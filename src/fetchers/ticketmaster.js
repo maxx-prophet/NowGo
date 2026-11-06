@@ -133,9 +133,12 @@ export async function fetchTicketmaster({ fetchImpl = fetch } = {}) {
   const filtered = raw.filter((e) => {
     if (e.dates?.status?.code === "cancelled") return false;
     if (e.dates?.spanMultipleDays === true) return false;
+    // No localTime (tours, "noSpecificTime" listings): ingest would default it
+    // to midnight, which lands tomorrow's tour in tonight's feed as 12:00 AM.
+    if (!e.dates?.start?.localTime) return false;
     return true;
   });
-  console.log(`   🧹 ${filtered.length} after filtering cancelled + multi-day`);
+  console.log(`   🧹 ${filtered.length} after filtering cancelled + multi-day + untimed`);
 
   return filtered.map(normalizeTicketmasterEvent);
 }

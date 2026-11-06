@@ -98,3 +98,12 @@ test("a real price range is kept", async () => {
   assert.equal(e.priceMin, 38.1);
   assert.equal(e.priceMax, 54.99);
 });
+
+test("events with no start time are dropped, not defaulted to midnight", async () => {
+  // Radio City and MSG tours carry a date but no localTime. Ingest filled in
+  // 00:00, so tomorrow's tour showed in tonight's feed as "12:00 AM, starts in 1h".
+  const untimed = { ...evt("tour"), dates: { start: { localDate: "2026-09-02", noSpecificTime: true }, status: { code: "onsale" } } };
+  const { fetchImpl } = stubFetch([{ _embedded: { events: [evt("show"), untimed] }, page: { totalPages: 1 } }]);
+  const events = await fetchTicketmaster({ fetchImpl });
+  assert.deepEqual(events.map((e) => e.id), ["tm_show"]);
+});
