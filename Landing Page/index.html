@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NowGo — Your city, tonight. Now in beta.</title>
-  <meta name="description" content="NowGo shows what's on in New York tonight, tells you when to leave, and which rooms let you walk in. iOS beta open now on TestFlight." />
-  <meta property="og:title" content="NowGo — Your city, tonight. Now in beta." />
-  <meta property="og:description" content="What's on in NYC tonight, when to leave, and where you can walk in. Join the iOS beta." />
+  <title>NowGo — Your city, tonight. Now on the App Store.</title>
+  <meta name="description" content="NowGo shows what's on in New York tonight, tells you when to leave, and which rooms let you walk in. Free on the App Store." />
+  <meta property="og:title" content="NowGo — Your city, tonight. Now on the App Store." />
+  <meta property="og:description" content="What's on in NYC tonight, when to leave, and where you can walk in. Free on the App Store." />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name='impact-site-verification' value='1d48550e-cbbe-4fe0-8a79-0e2759304933'>
@@ -518,7 +518,7 @@
     <!-- NAV -->
     <nav>
       <span class="nav-logo">NowGo</span>
-      <span class="nav-badge">Now in beta · iOS</span>
+      <span class="nav-badge">Now on the App Store · iOS</span>
     </nav>
 
     <!-- HERO -->
@@ -531,11 +531,11 @@
         NowGo shows <strong>what's on in New York tonight</strong> — concerts, jazz, comedy, sports — with a leave-by time worked out from where you're standing, and which rooms let you just walk in. No more tabs. No more guessing.
       </p>
 
-      <!-- BETA CTA -->
+      <!-- APP STORE CTA -->
       <div class="form-wrap">
-        <div class="form-label">The beta is open</div>
-        <a class="cta-primary" data-placement="hero" href="https://testflight.apple.com/join/kMKDNEkK" target="_blank" rel="noopener">Join the iOS beta on TestFlight →</a>
-        <p class="cta-meta">Free during beta · iPhone only · NYC only</p>
+        <div class="form-label">Out now on iPhone</div>
+        <a class="cta-primary" data-placement="hero" href="https://apps.apple.com/us/app/nowgo-nyc/id6797667109" target="_blank" rel="noopener">Download on the App Store →</a>
+        <p class="cta-meta">Free · iPhone only · NYC only</p>
 
         <!-- EMAIL FALLBACK -->
         <div class="form-secondary">
@@ -545,7 +545,7 @@
             <button class="form-btn" onclick="handleSubmit()">Send me the link →</button>
           </div>
           <p class="form-note">No spam. Unsubscribe anytime.</p>
-          <p class="form-success" id="formSuccess">✓ Got it. We'll email you the link — or if you're on your iPhone, <a data-placement="form_success" href="https://testflight.apple.com/join/kMKDNEkK" target="_blank" rel="noopener" style="color:inherit;">open it now →</a></p>
+          <p class="form-success" id="formSuccess">✓ Got it. We'll email you the link — or if you're on your iPhone, <a data-placement="form_success" href="https://apps.apple.com/us/app/nowgo-nyc/id6797667109" target="_blank" rel="noopener" style="color:inherit;">open it now →</a></p>
         </div>
       </div>
     </section>
@@ -618,7 +618,7 @@
 
     <!-- TESTER NOTES -->
     <section class="section">
-      <div class="section-label">What we need from beta testers</div>
+      <div class="section-label">Help us make it better</div>
       <div class="tester-block">
         <div class="tester-item">
           <div class="tester-num">01</div>
@@ -626,11 +626,11 @@
         </div>
         <div class="tester-item">
           <div class="tester-num">02</div>
-          <div class="tester-text">When something is wrong — a venue that isn't walk-in, a leave-by that made you late, a blank screen — tell us. <a href="mailto:hello@nowgoapp.com">hello@nowgoapp.com</a>, or the TestFlight feedback button.</div>
+          <div class="tester-text">When something is wrong — a venue that isn't walk-in, a leave-by that made you late, a blank screen — tell us. <a href="mailto:hello@nowgoapp.com">hello@nowgoapp.com</a>, or the Feedback button in the app.</div>
         </div>
         <div class="tester-item">
           <div class="tester-num">03</div>
-          <div class="tester-text">Expect rough edges. It's NYC only, iPhone only, and the listings are only as good as the sources feeding them. That's what you're here to help fix.</div>
+          <div class="tester-text">It's new, NYC only and iPhone only, and the listings are only as good as the sources feeding them. If NowGo got you out the door, a rating on the App Store helps more than you'd think.</div>
         </div>
       </div>
     </section>
@@ -649,7 +649,7 @@
         <span class="city-chip">Washington DC</span>
         <span class="city-chip">Seattle</span>
         <span class="city-chip">Austin</span>
-        <span class="city-chip">Next, if the beta says so</span>
+        <span class="city-chip">Next, if New York says so</span>
       </div>
     </section>
 
@@ -657,7 +657,7 @@
     <footer>
       <span class="footer-logo">NowGo</span>
       <div class="footer-links">
-        <a data-placement="footer" href="https://testflight.apple.com/join/kMKDNEkK" target="_blank" rel="noopener">TestFlight</a>
+        <a data-placement="footer" href="https://apps.apple.com/us/app/nowgo-nyc/id6797667109" target="_blank" rel="noopener">App Store</a>
         <a href="https://maxx-prophet.github.io/NowGo/privacy-policy/">Privacy</a>
         <a href="mailto:hello@nowgoapp.com">hello@nowgoapp.com</a>
       </div>
@@ -705,11 +705,11 @@
     if (e.key === 'Enter') handleSubmit();
   });
 
-  // Which TestFlight link people use. sendBeacon so the event survives iOS
-  // handing off to the TestFlight app mid-tap.
-  document.querySelectorAll('a[href*="testflight.apple.com"]').forEach(function(a) {
+  // Which App Store link people use. sendBeacon so the event survives iOS
+  // handing off to the App Store app mid-tap.
+  document.querySelectorAll('a[href*="apps.apple.com"]').forEach(function(a) {
     a.addEventListener('click', function() {
-      posthog.capture('testflight_clicked', { placement: a.dataset.placement || 'unknown' }, { transport: 'sendBeacon' });
+      posthog.capture('app_store_clicked', { placement: a.dataset.placement || 'unknown' }, { transport: 'sendBeacon' });
     });
   });
   </script>
