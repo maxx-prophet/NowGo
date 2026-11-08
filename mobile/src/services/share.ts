@@ -60,9 +60,9 @@ export function shareMessage(
   return (event.url ? `${opening} ${event.url}` : opening) + CREDIT;
 }
 
-// "Invite a friend" from the bottom of the feed. Written as the tester talking,
-// since it goes out under their name. Links the landing page rather than
-// TestFlight: the page explains the app before Apple's install screen does.
+// "Invite a friend" from the bottom of the feed. Written as the user talking,
+// since it goes out under their name. Links the landing page rather than the
+// App Store: the page explains the app, and its visits can be counted.
 export function inviteMessage(): string {
-  return "I've been using NowGo to see what's on in NYC tonight and when to leave. Free iPhone beta: https://nowgoapp.com";
+  return "I've been using NowGo to see what's on in NYC tonight and when to leave. Free on iPhone: https://nowgoapp.com";
 }

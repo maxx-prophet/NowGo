@@ -104,8 +104,8 @@ export default function TonightFeed({ navigation }: Props) {
   const analytics = useAnalytics();
   const sendFeedback = useFeedback();
 
-  // Always visible in the header, not tucked in a menu: during the beta a
-  // tester who has something to say should never have to look for where.
+  // Always visible in the header, not tucked in a menu: a user who has
+  // something to say should never have to look for where.
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (

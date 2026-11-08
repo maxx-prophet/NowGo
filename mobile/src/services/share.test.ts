@@ -91,12 +91,13 @@ test("shareTimeFormatMatchesTheApp", () => {
   );
 });
 
-test("an invite links the landing page, not TestFlight directly", () => {
+test("an invite links the landing page, not a store page directly", () => {
   // The landing page says what the app is before Apple's install screen does,
   // and it is the page whose visits can be counted.
   const msg = inviteMessage();
   assert.ok(msg.includes("https://nowgoapp.com"), msg);
   assert.ok(!msg.includes("testflight"), msg);
+  assert.ok(!/beta/i.test(msg), "the app is out of beta: " + msg);
 });
 
 test("an invite says what the app does, in one breath", () => {

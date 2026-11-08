@@ -1,17 +1,10 @@
-import { Redis } from "@upstash/redis";
 import fetch from "node-fetch";
 import pool from "../../db/index.js";
 import dotenv from "dotenv";
 dotenv.config({ path: ".env.nowgo" });
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
-
 const TD_USERNAME = process.env.TICKETSDATA_USERNAME;
 const TD_PASSWORD = process.env.TICKETSDATA_PASSWORD;
-const CACHE_TTL = 900; // 15 minutes
 const DELAY_MS = 600;  // stay under TicketsData rate limits
 
 // ─── TIER MAPPING ─────────────────────────────────────────────────────────────
@@ -88,21 +81,11 @@ export async function runAvailabilityCheck() {
 
   console.log(`  📋 ${events.length} ticketed events to check`);
 
-  let hits = 0, checked = 0, errors = 0;
+  let checked = 0, errors = 0;
 
   for (const event of events) {
-    const cacheKey = `avail:${event.event_id}`;
-
     try {
-      const cached = await redis.get(cacheKey);
-      if (cached) {
-        hits++;
-        continue;
-      }
-
       const tier = await fetchTier(event.url);
-
-      await redis.set(cacheKey, tier, { ex: CACHE_TTL });
 
       await pool.query(
         `UPDATE events SET availability_tier = $1, last_checked_at = now() WHERE event_id = $2`,
@@ -132,5 +115,5 @@ export async function runAvailabilityCheck() {
     }
   }
 
-  console.log(`  🏁 Availability done — ${hits} cached, ${checked} checked, ${errors} errors`);
+  console.log(`  🏁 Availability done — ${checked} checked, ${errors} errors`);
 }

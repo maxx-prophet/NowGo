@@ -19,3 +19,7 @@ npm-debug.log*
 # Runtime
 pids
 *.pid
+
+# Local scratch from browser previews and agent tooling
+.playwright-mcp/
+.superpowers/

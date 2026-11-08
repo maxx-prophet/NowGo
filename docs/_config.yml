@@ -16,6 +16,10 @@ exclude:
   - 2026-06-14-constraint-bar-design.md
   - nowgo-funding-request.md
   - nowgo-com-outreach-email.md
+  - launch-posts.md
+  - beta-invite-email.md
+  - reddit-posts.md
+  - jazz-nyc-permission-email.md
 
 defaults:
   - scope:

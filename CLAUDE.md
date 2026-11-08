@@ -325,6 +325,28 @@ Verify what a build will actually see with:
   check `GET /v1/builds/{id}/buildBetaDetail`; if it is still
   `READY_FOR_BETA_SUBMISSION`, `POST /v1/betaAppReviewSubmissions` for it. Done
   means `IN_BETA_TESTING`.
+- **The app is live on the App Store** (NowGo NYC, app id `6797667109`,
+  https://apps.apple.com/us/app/nowgo-nyc/id6797667109). Version 1.0 / build
+  12 was released 2026-11-07. **TestFlight now reaches testers only** — a
+  change reaches the public only as a new App Store version:
+  1. Bump `version` in `mobile/app.config.js` (1.0.0 → 1.0.1); a build
+     number alone is not a new version.
+  2. `eas build`, `eas submit`, and the Friends and Family steps above.
+  3. In App Store Connect: create the version, attach the build, fill
+     "What's New", submit for review (`POST /v1/reviewSubmissions`, then a
+     `reviewSubmissionItems` for the version, then PATCH `submitted: true`).
+  4. Release is **manual** — it waits at `PENDING_DEVELOPER_RELEASE` until
+     released (`POST /v1/appStoreVersionReleaseRequests`). Ask Donnie first.
+
+  Store screenshots belong to the version and are 6.9" (`APP_IPHONE_67`,
+  1320×2868). Donnie's iPhone 17 Pro shoots 1206×2622: upscale with
+  `sips --resampleWidth 1320`, then `-c 2868 1320`. A fresh upload sits in
+  `UPLOAD_COMPLETE` for up to ~10 minutes before `COMPLETE`, and review
+  submission needs every one `COMPLETE`. The app's `contentRightsDeclaration`
+  is `USES_THIRD_PARTY_CONTENT`.
+
+  **Queued for 1.0.1:** the "Invite a friend" text no longer says "beta"
+  (`mobile/src/services/share.ts`) — committed, not yet in a build.
 - **Add to Calendar needs no calendar permission.** It goes through
   `expo-calendar`'s `createEventInCalendarAsync`, the system event editor, so
   there is no `requestCalendarPermissionsAsync`, no privacy-manifest change
