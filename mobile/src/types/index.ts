@@ -5,7 +5,7 @@ export type Night = "tonight" | "tomorrow";
 
 export interface Event {
   event_id: string;
-  // Which listing source this came from: 'ticketmaster' | 'seatgeek' | 'jazz_nyc'.
+  // Which listing source this came from: 'ticketmaster' | 'seatgeek' | 'jazz_nyc' | 'donyc'.
   source?: string | null;
   // Set by the API only for a source that needs crediting on screen — today
   // just jazz-nyc, whose events carry the venue's website as their url, so

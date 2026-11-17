@@ -2,6 +2,8 @@ import cron from "node-cron";
 import { fetchTicketmaster } from "./fetchers/ticketmaster.js";
 import { fetchSeatGeek } from "./fetchers/seatgeek.js";
 import { fetchJazzNYC, getLastFetchStats } from "./fetchers/jazz-nyc.js";
+import { fetchDoNYC } from "./fetchers/donyc.js";
+import { ingestDoNYC } from "./services/donyc-ingest.js";
 import { ingestEvents } from "../db/ingest.js";
 import { geocodeVenues, backfillVenueWebsites } from "./services/geocode.js";
 import { backfillNeighborhoods } from "./services/neighborhoods.js";
@@ -75,6 +77,18 @@ export async function runPipeline() {
 
     const { ok, skipped } = await timer.stage("ingest", () => ingestEvents(allEvents));
     console.log(`  💾 Ingested ${ok} events, skipped ${skipped}`);
+
+    // DoNYC goes last among the sources because it is matched against what the
+    // others put in the database: a show already listed is not added again,
+    // it only fills that row's blanks (price, ticket link, sold-out). Must run
+    // before geocoding so the venues it adds get coordinates and a
+    // neighborhood on this same run.
+    const dnEvents = await timer.optional("fetch:donyc", fetchDoNYC);
+    if (dnEvents) {
+      console.log(`  ✅ DoNYC: ${dnEvents.length} events`);
+      await markSourceFetched("donyc");
+      await timer.optional("ingest:donyc", () => ingestDoNYC(dnEvents));
+    }
 
     // Did the scraper bring in the venues it usually does? Runs after ingest
     // so tonight's rows are in the comparison. Reports to PostHog every run;

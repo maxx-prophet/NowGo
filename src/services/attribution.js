@@ -12,9 +12,15 @@
 // credit back and makes it tappable.
 //
 // Keyed by events.source — the same values the fetchers write and the sources
-// table holds: 'ticketmaster', 'seatgeek', 'jazz_nyc'.
+// table holds: 'ticketmaster', 'seatgeek', 'jazz_nyc', 'donyc'.
+//
+// DoNYC is in the same position: its events link to whatever ticket page the
+// listing names (dice.fm, eventbrite, a club's own site), so the button never
+// says where we found the show. Only events DoNYC alone carries get the
+// credit; a DoNYC listing matched to an existing row is not ingested at all.
 export const SOURCE_ATTRIBUTION = {
   jazz_nyc: { name: "Jazz NYC", url: "https://jazz-nyc.com" },
+  donyc: { name: "DoNYC", url: "https://donyc.com" },
 };
 
 export function attributionFor(source) {

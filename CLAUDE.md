@@ -264,6 +264,47 @@ These are real as of 2026-08-07. Verify before relying on any of them.
   would need is already on the page: widening `targetDates` is the cheap part,
   the tonight-window SQL and ranking are not.
 
+## DoNYC (source `donyc`, event ids `dn_…`)
+
+Added 2026-11-17. On that day 119 of DoNYC's 169 remaining tonight listings
+were in no other source — comedy rooms, small music venues, DJ nights, talks.
+
+- **There is no HTML to scrape.** donyc.com is SvelteKit; every page has a
+  `__data.json` twin in `devalue` format (a flat array of indices — see
+  `unflatten` in `src/fetchers/donyc.js`). Listings come from
+  `/events/YYYY/MM/DD/__data.json?page_size=50&page=N` (50 is the cap);
+  price, ticket link, sold-out flag and venue address/coordinates are only on
+  each event's `<permalink>/__data.json`, so a run costs ~350 requests (~20s).
+- **Matched, not merged.** `src/services/donyc-ingest.js` runs after the other
+  sources are ingested and matches against the **database** (so a Ticketmaster
+  outage does not let DoNYC re-add TM's shows). A matched DoNYC event is never
+  ingested; it only fills blanks on the existing row — price, a real link on a
+  jazz-nyc row, an explicit sold-out flag, segment/genre, venue address and
+  coordinates. A `dn_` row that a later run finds covered by another source is
+  deleted. The log line `🔀 DoNYC: N events → M already listed, U new` is the
+  dedup at a glance.
+- **Matching rules** (`src/services/donyc-match.js`) are tested against the
+  real pairings from the first dry run. Same room + same time only counts when
+  nothing else is on in that room then — comedy clubs run several rooms at
+  once. A title sharing one word is not a match when the venues cannot be
+  compared ("Fiction Book Group" vs The Book of Mormon). DoNYC files Mezzrow
+  and Jazzcultural sets under "Smalls Jazz Club"; those are caught by title.
+- **Only `sold_out` is believed for availability.** DoNYC marks almost
+  everything "On sale", which says tickets were offered, not that any are
+  left; DoNYC events otherwise stay `unknown`.
+- **`ticket_info` is free text.** `parsePriceInfo` reads the first `$` price
+  or range only ("$35.15 - $50.60 cover + $25 minimum" is 35.15–50.60) and
+  ignores bare ages ("16+"). About half of DoNYC events carry a price.
+- **Its categories fill chips nothing else did.** The app's Film, Art, Talks
+  and Nightlife chips send `segment=` values no other source emits; DoNYC's
+  categories map onto them (`SEGMENTS` in the fetcher).
+- **Needs migration `018_donyc_source.sql`** (the `events.source` FK). The
+  stage checks for the `sources` row and fails with that message rather than
+  skipping every event.
+- **Node's built-in HTTP does not read `HTTPS_PROXY`.** In a sandbox that
+  proxies egress, run the fetcher with `NODE_USE_ENV_PROXY=1`
+  (`NODE_USE_ENV_PROXY=1 npm run fetch:donyc`). Railway needs nothing.
+
 ## Verifying third-party links
 
 **Ticketmaster returns 401 to curl** — that is their bot wall, not a dead link.
